@@ -1,0 +1,115 @@
+{
+  "projectType": "frontend",
+  "projectName": "CryptoDash",
+  "projectDescription": "A modern cryptocurrency portfolio tracker with real-time market data, interactive charts, and comprehensive portfolio management",
+  "theme": "mint",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/portfolio",
+              "features/market-explorer",
+              "features/analysis-tools",
+              "features/transactions"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/overview",
+              "components/layout",
+              "components/common",
+              "components/charts"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/project-structure",
+              "development/state-management",
+              "development/api-integration",
+              "development/theming"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Hooks",
+            "pages": [
+              "api/hooks/use-dashboard-data",
+              "api/hooks/use-chart-tooltip",
+              "api/hooks/use-translations",
+              "api/hooks/use-document-title"
+            ]
+          },
+          {
+            "group": "Context",
+            "pages": [
+              "api/context/settings-context",
+              "api/context/toast-context"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/utils/csv-export",
+              "api/utils/formatters",
+              "api/utils/chart-helpers"
+            ]
+          },
+          {
+            "group": "API Services",
+            "pages": [
+              "api/services/dashboard-api",
+              "api/services/market-api",
+              "api/services/portfolio-api"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time cryptocurrency tracking with CoinGecko API",
+    "Interactive charts with hover tooltips and animations",
+    "Portfolio management with performance analytics",
+    "Market explorer with 2,500+ cryptocurrencies",
+    "Dark/light theme with smooth transitions",
+    "Bilingual support (English/Spanish)",
+    "CSV export for portfolio and transactions",
+    "Responsive mobile-first design"
+  ],
+  "publicApiSurface": [
+    "useSettings() - Settings context hook for theme and language",
+    "useToast() - Toast notifications hook",
+    "useTranslations() - Internationalization hook",
+    "useDashboardData() - Dashboard data fetching hook",
+    "useChartTooltip() - Chart tooltip interactions hook",
+    "useDocumentTitle() - Dynamic document title hook",
+    "getDashboardSummary() - Fetch dashboard summary data",
+    "getMarketData() - Fetch market data from CoinGecko",
+    "getPortfolioPerformance() - Fetch portfolio performance",
+    "exportToCSV() - Export data to CSV file",
+    "formatCurrency() - Format numbers as currency",
+    "formatPercentage() - Format numbers as percentages"
+  ]
+}
