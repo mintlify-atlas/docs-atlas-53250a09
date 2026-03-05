@@ -43,7 +43,8 @@
               "features/portfolio",
               "features/market-explorer",
               "features/analysis-tools",
-              "features/transactions"
+              "features/transactions",
+              "features/settings"
             ]
           },
           {

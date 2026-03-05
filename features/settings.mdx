@@ -1,0 +1,309 @@
+---
+title: Settings
+description: Customize your CryptoDash experience with theme, language, and notification preferences
+---
+
+## Overview
+
+The Settings page allows you to personalize your CryptoDash experience. Switch between dark and light themes, change the interface language between English and Spanish, and configure notification preferences (coming soon).
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Theme Toggle" icon="palette">
+    Switch between dark and light mode with animated transitions
+  </Card>
+  <Card title="Language Selection" icon="language">
+    Toggle between English and Spanish interface languages
+  </Card>
+  <Card title="Persistent Settings" icon="save">
+    All preferences are saved to localStorage
+  </Card>
+  <Card title="Developer Tools" icon="bug">
+    Test error boundaries and 404 pages (dev mode only)
+  </Card>
+</CardGroup>
+
+## Appearance Settings
+
+### Theme Toggle
+
+Switch between dark and light themes with a single click:
+
+```jsx SettingsPage.jsx:21-24
+const handleThemeToggle = () => {
+  toggleTheme()
+  success(t.settings.toasts.themeChanged)
+}
+```
+
+The theme toggle:
+- **Dark Mode**: Optimized for low-light environments with dark backgrounds
+- **Light Mode**: Clean, bright interface for daytime use
+- **Smooth Transitions**: CSS transitions ensure smooth color changes
+- **Persistent**: Theme preference saved to localStorage
+
+<Info>
+The theme is managed by the `SettingsContext` and applies globally across all pages.
+</Info>
+
+### Implementation
+
+The theme toggle uses the `useSettings` hook:
+
+```jsx SettingsPage.jsx:10
+const { theme, toggleTheme, language, toggleLanguage } = useSettings()
+```
+
+Theme state is synchronized with Tailwind's dark mode:
+
+```javascript SettingsContext.jsx:25-33
+useEffect(() => {
+  localStorage.setItem('crypto-dash-theme', theme)
+  
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}, [theme])
+```
+
+## Language Settings
+
+### Language Toggle
+
+Switch between English and Spanish with instant UI updates:
+
+```jsx SettingsPage.jsx:26-31
+const handleLanguageToggle = () => {
+  toggleLanguage()
+  setTimeout(() => {
+    success(language === 'en' 
+      ? translations.es.settings.toasts.languageChanged 
+      : translations.en.settings.toasts.languageChanged)
+  }, 100)
+}
+```
+
+Supported languages:
+- **English (EN)**: Default language
+- **Spanish (ES)**: Complete translation of all UI elements
+
+<Tip>
+The language toggle button displays the current language code (EN/ES) for quick identification.
+</Tip>
+
+### Translation System
+
+All text is managed through the `useTranslations` hook:
+
+```jsx SettingsPage.jsx:12
+const t = useTranslations()
+```
+
+This returns the complete translations object for the active language:
+
+```javascript
+t.settings.title        // "Settings" or "Configuración"
+t.settings.appearance   // Appearance section translations
+t.settings.language     // Language section translations
+```
+
+The translation system is documented in detail in the [useTranslations API reference](/api/hooks/use-translations).
+
+## Notification Settings
+
+<Note>
+Notification features are currently under development and marked as "Coming Soon" in the UI.
+</Note>
+
+The Settings page includes placeholder UI for future notification features:
+
+### Planned Features
+
+1. **Price Alerts**: Get notified when cryptocurrencies reach target prices
+2. **Email Notifications**: Receive portfolio updates via email
+3. **Push Notifications**: Browser push notifications for important events
+
+The UI for these features is visible but disabled (with 50% opacity):
+
+```jsx SettingsPage.jsx:118-162
+<div className="rounded-2xl border border-slate-200 bg-white p-6 opacity-50">
+  <div className="mb-6">
+    <h2>{t.settings.notifications.title}</h2>
+    <p>{t.settings.notifications.desc}</p>
+  </div>
+
+  {/* Price Alerts toggle (disabled) */}
+  {/* Email Notifications toggle (disabled) */}
+
+  <div className="mt-4 rounded-lg bg-blue-500/10 px-4 py-3">
+    <p className="text-xs text-blue-600">
+      {t.settings.notifications.comingSoon}
+    </p>
+  </div>
+</div>
+```
+
+## Developer Tools
+
+<Warning>
+Developer tools are only visible in development mode (`import.meta.env.DEV`). They will not appear in production builds.
+</Warning>
+
+When running in development mode, the Settings page includes two testing utilities:
+
+### Test Error Boundary
+
+Click the "Test Error Boundary" button to trigger a React error and verify the ErrorBoundary component is working correctly:
+
+```jsx SettingsPage.jsx:14-19
+const [shouldThrowError, setShouldThrowError] = useState(false)
+
+if (shouldThrowError) {
+  throw new Error('🧪 Test Error: Error Boundary is working!')
+}
+```
+
+This demonstrates:
+- Error boundary functionality
+- Error recovery UI
+- Developer info display (stack trace in dev mode)
+
+### Test 404 Page
+
+Navigate to a non-existent route to test the 404 page:
+
+```jsx SettingsPage.jsx:209-215
+<button
+  onClick={() => navigate('/test-404-page-does-not-exist')}
+>
+  <span className="material-symbols-outlined">open_in_new</span>
+  Test 404
+</button>
+```
+
+This opens the custom NotFoundPage component with:
+- Friendly error message
+- Navigation back to dashboard
+- Animated illustrations
+
+## UI Components
+
+The Settings page uses several UI patterns:
+
+### Toggle Switches
+
+Custom toggle switches with smooth animations:
+
+```jsx SettingsPage.jsx:64-77
+<button
+  onClick={handleThemeToggle}
+  className="relative h-7 w-14 rounded-full bg-slate-300"
+>
+  <div
+    className={`absolute top-1 h-5 w-5 rounded-full bg-[#2bee79] shadow-lg transition-all ${
+      theme === 'dark' ? 'left-1' : 'left-8'
+    }`}
+  >
+    <span className="material-symbols-outlined">
+      {theme === 'dark' ? 'dark_mode' : 'light_mode'}
+    </span>
+  </div>
+</button>
+```
+
+Features:
+- **Animated Position**: Switch position animates with CSS transitions
+- **Icon Display**: Shows current state icon inside the switch
+- **Color Coding**: Uses brand green (#2bee79) for active state
+
+### Setting Cards
+
+Each setting is contained in a rounded card:
+
+```jsx SettingsPage.jsx:45-79
+<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="mb-6">
+    <h2>{t.settings.appearance.title}</h2>
+    <p>{t.settings.appearance.desc}</p>
+  </div>
+
+  <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+    <div className="flex items-center gap-4">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl">
+        <span className="material-symbols-outlined">
+          {theme === 'dark' ? 'dark_mode' : 'light_mode'}
+        </span>
+      </div>
+      <div>
+        <p className="font-bold">{t.settings.appearance.theme}</p>
+        <p className="text-sm">{t.settings.appearance.themeDesc}</p>
+      </div>
+    </div>
+    {/* Toggle switch */}
+  </div>
+</div>
+```
+
+## Data Persistence
+
+All settings are persisted to localStorage:
+
+```javascript SettingsContext.jsx:6-14
+const [theme, setTheme] = useState(() => {
+  const saved = localStorage.getItem('crypto-dash-theme')
+  return saved || 'dark'
+})
+
+const [language, setLanguage] = useState(() => {
+  const saved = localStorage.getItem('crypto-dash-language')
+  return saved || 'en'
+})
+```
+
+localStorage keys:
+- `crypto-dash-theme`: "dark" or "light"
+- `crypto-dash-language`: "en" or "es"
+
+<Warning>
+Clearing browser data or localStorage will reset settings to defaults (dark theme, English language).
+</Warning>
+
+## Toast Notifications
+
+The Settings page displays success toasts when settings are changed:
+
+```jsx SettingsPage.jsx:11-12
+const { success } = useToast()
+// ...
+success(t.settings.toasts.themeChanged)
+```
+
+Toast messages are localized:
+- English: "Theme changed successfully"
+- Spanish: "Tema cambiado exitosamente"
+
+The toast system provides:
+- **Auto-dismiss**: Toasts disappear after 5 seconds
+- **Progress Bar**: Visual countdown to dismissal
+- **Pause on Hover**: Hovering pauses the countdown
+- **Smooth Animations**: Slide-in from the top-right corner
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Settings Context" icon="gear" href="/api/context/settings-context">
+    API reference for useSettings hook
+  </Card>
+  <Card title="Toast Context" icon="bell" href="/api/context/toast-context">
+    Toast notification system
+  </Card>
+  <Card title="Translations" icon="language" href="/api/hooks/use-translations">
+    Internationalization system
+  </Card>
+  <Card title="Theming" icon="palette" href="/development/theming">
+    Dark/light theme implementation
+  </Card>
+</CardGroup>
