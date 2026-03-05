@@ -1,0 +1,245 @@
+---
+title: 'Project Structure'
+description: 'Understanding the folder organization and architecture of CryptoDash'
+---
+
+## Overview
+
+CryptoDash follows a modular React architecture with clear separation of concerns. The project uses Vite as the build tool and follows modern React patterns with hooks and context.
+
+## Root Directory Structure
+
+```
+crypto-dash/
+├── src/                    # Source code
+├── public/                 # Static assets
+├── index.html              # HTML entry point
+├── package.json            # Dependencies and scripts
+├── vite.config.js          # Vite configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+└── eslint.config.js        # ESLint configuration
+```
+
+## Source Directory (`src/`)
+
+The source directory is organized into feature-based modules:
+
+<CodeGroup>
+
+```bash Main Directories
+src/
+├── api/                    # API integration layer
+├── components/             # React components
+├── contexts/               # React Context providers
+├── hooks/                  # Custom React hooks
+├── layouts/                # Layout components
+├── pages/                  # Page components
+├── router/                 # Routing configuration
+├── utils/                  # Utility functions
+├── constants/              # Constants and configuration
+├── i18n/                   # Internationalization
+├── assets/                 # Images and static files
+├── App.jsx                 # Root App component
+├── main.jsx                # Application entry point
+└── index.css               # Global styles
+```
+
+</CodeGroup>
+
+## API Layer
+
+The API layer is organized by feature domain:
+
+```
+api/
+├── axios.js                # Axios client configuration
+├── dashboard/
+│   └── dashboardApi.js     # Global crypto statistics
+├── market/
+│   └── marketApi.js        # Market data and charts
+└── portfolio/
+    └── portfolioApi.js     # Portfolio management
+```
+
+### API Client Setup
+
+The base axios client is configured in `src/api/axios.js`:
+
+```javascript src/api/axios.js
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_COINGECKO_BASE_URL ?? 'https://api.coingecko.com/api/v3'
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+})
+```
+
+## Components Organization
+
+Components are grouped by feature and complexity:
+
+<Tabs>
+  <Tab title="Common">
+    Reusable components used across the application:
+    
+    - `CountUpValue.jsx` - Animated number counter
+    - `ErrorBoundary.jsx` - Error boundary wrapper
+    - `SkeletonLoader.jsx` - Loading placeholders
+    - `ToastContainer.jsx` - Toast notification display
+  </Tab>
+  
+  <Tab title="Dashboard">
+    Dashboard-specific components:
+    
+    - `MainPerformanceChart.jsx` - Main price chart
+    - `MarketTable.jsx` - Market data table
+    - `SummaryCardsGrid.jsx` - Summary statistics cards
+  </Tab>
+  
+  <Tab title="Layout">
+    Layout and navigation components:
+    
+    - `Sidebar.jsx` - Navigation sidebar
+    - `TopBar.jsx` - Top navigation bar
+  </Tab>
+  
+  <Tab title="Feature Components">
+    Domain-specific components:
+    
+    - `market/` - Market page components
+    - `portfolio/` - Portfolio page components
+    - `transactions/` - Transaction components
+  </Tab>
+</Tabs>
+
+## Pages
+
+Page components represent full routes:
+
+```
+pages/
+├── DashboardPage.jsx       # Main dashboard
+├── PortfolioPage.jsx       # Portfolio management
+├── MarketPage.jsx          # Market overview
+├── AnalisisPage.jsx        # Analysis tools
+├── TransactionsPage.jsx    # Transaction history
+├── SettingsPage.jsx        # User settings
+└── NotFoundPage.jsx        # 404 page
+```
+
+## Routing Architecture
+
+The application uses React Router v7 with a nested layout structure:
+
+```jsx src/router/AppRouter.jsx
+<BrowserRouter>
+  <ErrorBoundary>
+    <Routes>
+      <Route path="/" element={<DashboardLayout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="portafolio" element={<PortfolioPage />} />
+        <Route path="mercado" element={<MarketPage />} />
+        {/* ... more routes */}
+      </Route>
+    </Routes>
+  </ErrorBoundary>
+</BrowserRouter>
+```
+
+## Utilities
+
+Utility modules provide helper functions:
+
+- **`dashboardCharts.js`** - SVG path generation for charts
+- **`dashboardFormatters.js`** - Number and currency formatting
+- **`csvExport.js`** - CSV export functionality
+
+## Constants
+
+- **`navigation.js`** - Navigation menu configuration
+
+## Internationalization
+
+- **`translations.js`** - Translation strings for English and Spanish
+
+## Entry Points
+
+<Steps>
+  <Step title="HTML Entry">
+    `index.html` serves as the HTML shell with the root div
+  </Step>
+  
+  <Step title="JavaScript Entry">
+    `main.jsx` initializes React and wraps the app with providers:
+    
+    ```jsx src/main.jsx
+    createRoot(document.getElementById('root')).render(
+      <StrictMode>
+        <SettingsProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </SettingsProvider>
+      </StrictMode>,
+    )
+    ```
+  </Step>
+  
+  <Step title="App Component">
+    `App.jsx` renders the router which handles all page navigation
+  </Step>
+</Steps>
+
+## Key Dependencies
+
+From `package.json`:
+
+```json
+"dependencies": {
+  "react": "^19.2.0",
+  "react-dom": "^19.2.0",
+  "react-router-dom": "^7.13.0",
+  "axios": "^1.13.5",
+  "tailwindcss": "^4.2.0"
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Component Placement">
+    - Place reusable components in `components/common/`
+    - Place feature-specific components in their respective feature folders
+    - Keep page components simple and focused on layout
+  </Accordion>
+  
+  <Accordion title="API Organization">
+    - Group API functions by feature domain
+    - Use the shared axios client from `api/axios.js`
+    - Implement caching at the API layer when appropriate
+  </Accordion>
+  
+  <Accordion title="File Naming">
+    - Use PascalCase for component files: `ComponentName.jsx`
+    - Use camelCase for utility files: `utilityName.js`
+    - Use kebab-case for CSS files: `style-name.css`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Learn about Context API and custom hooks
+  </Card>
+  
+  <Card title="API Integration" icon="plug" href="/development/api-integration">
+    Understand the CoinGecko API integration
+  </Card>
+  
+  <Card title="Theming" icon="palette" href="/development/theming">
+    Explore the dark/light theme system
+  </Card>
+</CardGroup>

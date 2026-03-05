@@ -1,0 +1,134 @@
+---
+title: 'Dashboard API'
+description: 'Global cryptocurrency statistics and dashboard data'
+---
+
+## Overview
+
+The Dashboard API provides functions for fetching global cryptocurrency market statistics, including total market cap, trading volume, and market dominance metrics. It integrates with the CoinGecko `/global` endpoint.
+
+**File location:** `src/api/dashboard/dashboardApi.js`
+
+## Configuration
+
+The Dashboard API uses the shared axios client configured with:
+
+- **Base URL:** CoinGecko API v3 (`https://api.coingecko.com/api/v3`)
+- **Timeout:** 10 seconds (configurable via `VITE_API_TIMEOUT`)
+- **Authentication:** Optional CoinGecko Pro API key via `x-cg-pro-api-key` header
+- **Caching:** 5-minute TTL with in-flight request deduplication
+
+## Functions
+
+### getGlobalStats
+
+Fetches global cryptocurrency market statistics with automatic caching.
+
+```javascript
+import { getGlobalStats } from './api/dashboard/dashboardApi'
+
+const stats = await getGlobalStats()
+console.log('Total Market Cap:', stats.total_market_cap)
+console.log('Bitcoin Dominance:', stats.market_cap_percentage.btc)
+```
+
+#### Signature
+
+```javascript
+getGlobalStats(): Promise<Object>
+```
+
+#### Parameters
+
+This function takes no parameters.
+
+#### Returns
+
+<ResponseField name="data" type="object">
+  Global market statistics from CoinGecko
+
+  <ResponseField name="total_market_cap" type="object">
+    Total market capitalization by currency (e.g., `{ usd: 2500000000000 }`)
+  </ResponseField>
+
+  <ResponseField name="total_volume" type="object">
+    24-hour trading volume by currency
+  </ResponseField>
+
+  <ResponseField name="market_cap_percentage" type="object">
+    Market dominance percentages by cryptocurrency (e.g., `{ btc: 45.2, eth: 18.3 }`)
+  </ResponseField>
+
+  <ResponseField name="market_cap_change_percentage_24h_usd" type="number">
+    24-hour market cap change percentage in USD
+  </ResponseField>
+
+  <ResponseField name="active_cryptocurrencies" type="number">
+    Number of active cryptocurrencies tracked
+  </ResponseField>
+
+  <ResponseField name="markets" type="number">
+    Number of active markets
+  </ResponseField>
+</ResponseField>
+
+#### Error Handling
+
+```javascript
+try {
+  const stats = await getGlobalStats()
+  // Use stats
+} catch (error) {
+  console.error('Status:', error.status)
+  console.error('Message:', error.message)
+  console.error('Data:', error.data)
+}
+```
+
+Errors are normalized with the following structure:
+- `status` - HTTP status code (0 if network error)
+- `message` - Error message from API or generic message
+- `data` - Raw error response data
+- `original` - Original axios error object
+
+## Caching Behavior
+
+The `getGlobalStats` function implements intelligent caching:
+
+- **Cache TTL:** 5 minutes (`GLOBAL_STATS_TTL_MS = 5 * 60 * 1000`)
+- **In-flight deduplication:** Multiple concurrent calls share the same request
+- **Cache invalidation:** Automatic after TTL expires or on error
+
+```javascript
+// First call - hits the API
+const stats1 = await getGlobalStats()
+
+// Second call within 5 minutes - returns cached data
+const stats2 = await getGlobalStats()
+
+// Concurrent calls - both wait for the same request
+const [result1, result2] = await Promise.all([
+  getGlobalStats(),
+  getGlobalStats()
+])
+```
+
+## API Endpoint
+
+**CoinGecko Endpoint:** `GET /global`
+
+**Documentation:** https://docs.coingecko.com/reference/global
+
+## Environment Variables
+
+<ParamField path="VITE_COINGECKO_BASE_URL" type="string" default="https://api.coingecko.com/api/v3">
+  CoinGecko API base URL
+</ParamField>
+
+<ParamField path="VITE_API_TIMEOUT" type="number" default="10000">
+  Request timeout in milliseconds
+</ParamField>
+
+<ParamField path="VITE_COINGECKO_API_KEY" type="string">
+  Optional CoinGecko Pro API key for higher rate limits
+</ParamField>

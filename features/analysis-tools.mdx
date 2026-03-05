@@ -1,0 +1,481 @@
+---
+title: Analysis Tools
+description: Volatility metrics, performance comparison, and portfolio analytics with multi-asset charting
+---
+
+## Overview
+
+The Analysis Tools provide advanced portfolio analytics, including volatility metrics, asset performance comparison, profit/loss breakdown, and multi-line charts comparing your portfolio against Bitcoin and individual holdings.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Portfolio vs BTC" icon="chart-mixed">
+    Compare your portfolio performance against Bitcoin
+  </Card>
+  <Card title="Volatility Analysis" icon="chart-scatter">
+    Mean absolute daily change and risk metrics
+  </Card>
+  <Card title="P&L Breakdown" icon="scale-balanced">
+    Net gains, losses, and balance calculations
+  </Card>
+  <Card title="Multi-asset Charts" icon="layer-group">
+    Overlay up to 3 assets on the performance chart
+  </Card>
+</CardGroup>
+
+## Time Range Selector
+
+Analyze performance over different time periods:
+
+```jsx AnalisisPage.jsx:305-318
+<div className="flex items-center gap-2 rounded-xl border p-1">
+  {RANGE_OPTIONS.map((period) => (
+    <button
+      key={period}
+      onClick={() => setSelectedRange(period)}
+      className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+        selectedRange === period 
+          ? 'bg-[#2bee79] text-[#102217]' 
+          : 'text-slate-600'
+      }`}
+    >
+      {period}
+    </button>
+  ))}
+</div>
+```
+
+Available ranges:
+- **1D**: 1 day (24 hours)
+- **1S**: 1 week (7 days)
+- **1M**: 1 month (30 days)
+- **1A**: 1 year (365 days)
+- **TODO**: All time (1,825 days / 5 years)
+
+```javascript AnalisisPage.jsx:629-636
+const RANGE_OPTIONS = ['1D', '1S', '1M', '1A', 'TODO']
+const DAYS_BY_RANGE = {
+  '1D': 1,
+  '1S': 7,
+  '1M': 30,
+  '1A': 365,
+  TODO: 1825,
+}
+```
+
+## Current Value Card
+
+Displays your portfolio's current total value and accumulated profit/loss:
+
+```jsx AnalisisPage.jsx:326-348
+<div className="rounded-2xl border bg-white p-6">
+  <div className="flex items-center justify-between">
+    <p className="text-sm font-medium">Current Value</p>
+    <span className="material-symbols-outlined text-[#2bee79]">account_balance_wallet</span>
+  </div>
+  <h3 className="mt-1 text-3xl font-black">
+    <CountUpValue value={portfolioSummary.totalValueUsd} formatter={formatCurrency} />
+  </h3>
+  <div className={`mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 ${
+    balanceUsd >= 0 ? 'bg-[#2bee79]/10 text-[#2bee79]' : 'bg-red-500/10 text-red-500'
+  }`}>
+    <span className="material-symbols-outlined text-sm">
+      {balanceUsd >= 0 ? 'trending_up' : 'trending_down'}
+    </span>
+    <span>
+      <CountUpValue value={balanceUsd} formatter={formatCompactCurrency} /> 
+      ({formatSignedPercent(totalPnlPercent)})
+    </span>
+  </div>
+  <p className="mt-2 text-xs font-semibold">Accumulated P/L</p>
+</div>
+```
+
+The P&L calculation:
+
+```javascript AnalisisPage.jsx:76-124
+const { assetRows, gainsUsd, lossesUsd, totalInvestedUsd, balanceUsd } = useMemo(() => {
+  const rows = (primaryPortfolio?.positions ?? [])
+    .map((position) => {
+      const coin = marketById.get(position.assetId)
+      if (!coin) return null
+
+      const amount = Number(position.amount) || 0
+      const investedUsd = Number(position.investedUsd) || 0
+      const currentPrice = Number(coin.current_price) || 0
+      const currentValueUsd = amount * currentPrice
+      const pnlUsd = currentValueUsd - investedUsd
+
+      return { /* ... */, pnlUsd }
+    })
+    .filter(Boolean)
+
+  const gains = rows.filter((row) => row.pnlUsd > 0)
+    .reduce((accumulator, row) => accumulator + row.pnlUsd, 0)
+  
+  const losses = rows.filter((row) => row.pnlUsd < 0)
+    .reduce((accumulator, row) => accumulator + Math.abs(row.pnlUsd), 0)
+  
+  const totalInvestedUsd = rows.reduce((accumulator, row) => accumulator + row.investedUsd, 0)
+
+  return {
+    assetRows: rows,
+    gainsUsd: gains,
+    lossesUsd: losses,
+    totalInvestedUsd,
+    balanceUsd: gains - losses,
+  }
+}, [markets, portfolioSummary.totalValueUsd, primaryPortfolio])
+```
+
+## Period Growth Card
+
+Shows your portfolio's percentage change over the selected time range:
+
+```jsx AnalisisPage.jsx:350-359
+<div className="rounded-2xl border bg-white p-6">
+  <div className="flex items-center justify-between">
+    <p className="text-sm font-medium">Period Growth</p>
+    <span className="material-symbols-outlined text-[#2bee79]">query_stats</span>
+  </div>
+  <div className="mt-1 flex items-baseline gap-2">
+    <span className="text-2xl font-black">{portfolioRangeChangeLabel}</span>
+    <span className="text-xs font-bold text-[#2bee79]">{rangePeriodLabel}</span>
+  </div>
+</div>
+```
+
+## Multi-line Performance Chart
+
+The centerpiece of the analysis page is a multi-line chart comparing:
+
+1. **Your Portfolio** (green line with gradient fill)
+2. **Bitcoin Average** (red dashed line)
+3. **Top 3 Assets** (optional, toggleable cyan/yellow/purple lines)
+
+```jsx AnalisisPage.jsx:362-437
+<div className="rounded-2xl border bg-white p-6 lg:col-span-2">
+  <div className="mb-4 flex items-center justify-between">
+    <h4 className="text-sm font-bold">Portfolio Growth</h4>
+    <div className="flex flex-wrap gap-4">
+      {/* Legend */}
+      <div className="flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#2bee79]" />
+        <span className="text-xs font-medium">Wallet</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+        <span className="text-xs font-medium">BTC Average</span>
+      </div>
+      {topAssetLinesByRange.map((assetLine) => (
+        <button
+          key={assetLine.assetId}
+          onClick={() => toggleAssetVisibility(assetLine.assetId)}
+          className={`flex items-center gap-2 rounded-md border px-2 py-1 ${
+            visibleTopAssetLineIds.includes(assetLine.assetId)
+              ? 'border-[#1a2e23] bg-[#102217]'
+              : 'border-[#1a2e23] bg-transparent'
+          }`}
+        >
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: assetLine.color }} />
+          <span>{assetLine.symbol}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  <div className="h-52 w-full rounded-xl border bg-slate-50 p-4">
+    <svg className="h-full w-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="analysis-chart-fill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#2bee79" stopOpacity="0.24" />
+          <stop offset="100%" stopColor="#2bee79" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Portfolio line with gradient fill */}
+      <path d={`${chartPortfolioPath} L 100 30 L 0 30 Z`} fill="url(#analysis-chart-fill)" />
+      <path
+        d={chartPortfolioPath}
+        fill="none"
+        stroke="#2bee79"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      {/* BTC dashed line */}
+      <path
+        d={chartBtcPath}
+        fill="none"
+        stroke="#ef4444"
+        strokeWidth="1.6"
+        strokeDasharray="2 2"
+      />
+      {/* Top asset lines */}
+      {visibleTopAssetLines.map((assetLine) => (
+        <path
+          key={assetLine.assetId}
+          d={assetLine.path}
+          fill="none"
+          stroke={assetLine.color}
+          strokeWidth="1.2"
+        />
+      ))}
+    </svg>
+  </div>
+</div>
+```
+
+### Chart Data Fetching
+
+The chart fetches historical price data for all assets in your portfolio plus Bitcoin:
+
+```javascript AnalisisPage.jsx:132-218
+useEffect(() => {
+  let isMounted = true
+
+  async function fetchRangeSeries() {
+    const days = DAYS_BY_RANGE[selectedRange] ?? 30
+    const positions = primaryPortfolio?.positions ?? []
+    const uniqueCoinIds = Array.from(new Set(['bitcoin', ...positions.map((position) => position.assetId)]))
+
+    try {
+      setRangeLoading(true)
+      setRangeError('')
+
+      // Fetch all coin charts in parallel
+      const coinCharts = await Promise.all(
+        uniqueCoinIds.map((coinId) =>
+          getCoinPerformanceChart({ coinId, days }).then((chart) => ({
+            coinId,
+            chart,
+          })),
+        ),
+      )
+
+      if (!isMounted) return
+
+      const chartByCoinId = new Map(coinCharts.map((item) => [item.coinId, item.chart]))
+      const btcChart = chartByCoinId.get('bitcoin') ?? { prices: [] }
+      const btcSeries = extractChartSeries(btcChart)
+      
+      // Build portfolio series by summing all asset values at each timestamp
+      const portfolioSeries = buildPortfolioSeriesFromCharts(positions, chartByAssetId)
+      
+      setBtcSeriesByRange(btcSeries)
+      setPortfolioSeriesByRange(portfolioSeries)
+      // ...
+    } catch {
+      setRangeError('Failed to update series')
+    } finally {
+      setRangeLoading(false)
+    }
+  }
+
+  fetchRangeSeries()
+
+  return () => { isMounted = false }
+}, [primaryPortfolio, selectedRange])
+```
+
+### Portfolio Series Calculation
+
+Builds a portfolio value series by summing all asset values at each timestamp:
+
+```javascript AnalisisPage.jsx:678-706
+function buildPortfolioSeriesFromCharts(positions, chartByAssetId) {
+  const normalizedSeries = positions
+    .map((position) => {
+      const prices = chartByAssetId.get(position.assetId) ?? []
+      return {
+        amount: Number(position.amount) || 0,
+        prices,
+      }
+    })
+    .filter((entry) => entry.amount > 0 && entry.prices.length)
+
+  const minLength = Math.min(...normalizedSeries.map((entry) => entry.prices.length))
+
+  return Array.from({ length: minLength }, (_, index) => {
+    return normalizedSeries.reduce(
+      (total, entry) => total + entry.amount * entry.prices[index], 
+      0
+    )
+  })
+}
+```
+
+<Info>
+The chart automatically synchronizes all asset price series to the same time range by using the minimum available data length.
+</Info>
+
+## Insights Panel
+
+Below the chart, an insights panel explains your portfolio's performance relative to Bitcoin:
+
+```jsx AnalisisPage.jsx:459-491
+<div className="mt-4 rounded-lg border bg-slate-50 px-3 py-2">
+  <p className="text-xs font-semibold">{insightMessage}</p>
+  <p className="mt-1 text-[11px] font-medium">Comparison on the same time range</p>
+
+  <div className="mt-2 flex flex-wrap items-center gap-2">
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold">
+      <span className="text-[#2bee79]">Wallet</span>
+      <span>{portfolioRangeChangeLabel}</span>
+    </span>
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold">
+      <span className="text-red-400">BTC</span>
+      <span>{btcRangeChangeLabel}</span>
+    </span>
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold">
+      <span className="text-cyan-400">Diff vs BTC</span>
+      <span>{relativeRangeDeltaPpLabel}</span>
+    </span>
+  </div>
+</div>
+```
+
+The insight message adapts based on performance:
+
+```javascript AnalisisPage.jsx:252-274
+const insightMessage = useMemo(() => {
+  const rangeLabel = t.analysis.rangeLabel[selectedRange] || null
+
+  if (!Number.isFinite(relativeRangeDelta)) {
+    return `No sufficient data for the selected range.`
+  }
+
+  if (Math.abs(relativeRangeDelta) < 0.1) {
+    return `Your portfolio is performing in line with Bitcoin ${rangeLabel}.`
+  }
+
+  if (relativeRangeDelta > 0) {
+    return `Your portfolio outperformed Bitcoin by +${Math.abs(relativeRangeDelta).toFixed(2)} pp ${rangeLabel}.`
+  }
+
+  return `Your portfolio underperformed Bitcoin by -${Math.abs(relativeRangeDelta).toFixed(2)} pp ${rangeLabel}.`
+}, [relativeRangeDelta, selectedRange])
+```
+
+## Asset Comparison Table
+
+Compare all your portfolio assets side-by-side:
+
+```jsx AnalisisPage.jsx:495-565
+<section className="overflow-hidden rounded-2xl border bg-white">
+  <div className="border-b px-6 py-4">
+    <h2 className="text-base font-bold">Compare Assets</h2>
+  </div>
+
+  <table className="w-full text-left">
+    <thead className="border-b bg-slate-50">
+      <tr>
+        <th className="px-6 py-4">Asset</th>
+        <th className="px-6 py-4">Current Price</th>
+        <th className="px-6 py-4">24h %</th>
+        <th className="px-6 py-4">7d %</th>
+        <th className="px-6 py-4">Trend 7d</th>
+      </tr>
+    </thead>
+    <tbody className="divide-y">
+      {assetRows.map((row) => (
+        <tr key={row.assetId} className="hover:bg-slate-50">
+          <td className="px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex size-10 items-center justify-center rounded-full ${row.iconData.iconBg}`}>
+                <span className="material-symbols-outlined">{row.iconData.icon}</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold">{row.name}</p>
+                <p className="text-[10px] font-bold uppercase">{row.symbol}</p>
+              </div>
+            </div>
+          </td>
+          <td className="px-6 py-4 text-sm font-semibold">{formatCurrency(row.currentPrice)}</td>
+          <td className={`px-6 py-4 text-sm font-bold ${
+            row.change24h >= 0 ? 'text-[#2bee79]' : 'text-red-500'
+          }`}>
+            <span className="inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">
+                {row.change24h >= 0 ? 'north_east' : 'south_east'}
+              </span>
+              {formatSignedPercent(row.change24h)}
+            </span>
+          </td>
+          <td className={`px-6 py-4 text-sm font-bold ${
+            row.change7d >= 0 ? 'text-[#2bee79]' : 'text-red-500'
+          }`}>
+            {formatSignedPercent(row.change7d)}
+          </td>
+          <td className="px-6 py-4">
+            <svg className="h-8 w-24" viewBox="0 0 100 30">
+              <path
+                d={row.trendPath}
+                fill="none"
+                stroke={row.change7d >= 0 ? '#2bee79' : '#ef4444'}
+                strokeWidth="1.4"
+              />
+            </svg>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</section>
+```
+
+## Summary Cards
+
+Three cards at the bottom summarize key portfolio metrics:
+
+### Best Performer
+Asset with the highest 7-day gain, showing percentage change and portfolio dominance.
+
+### Highest Variation
+Asset with the largest absolute 7-day change (up or down), highlighting volatility.
+
+### P&L Summary
+Breakdown of:
+- **Net Gains**: Total profit from winning positions
+- **Net Losses**: Total losses from losing positions
+- **Balance**: Net gains minus losses
+
+```jsx AnalisisPage.jsx:604-622
+<div className="rounded-2xl border bg-white p-5">
+  <p className="text-xs font-bold uppercase">P&L Summary</p>
+  <div className="mt-4 space-y-3 text-sm">
+    <div className="flex items-center justify-between">
+      <span>Net Gains</span>
+      <span className="text-xl font-black text-[#2bee79]">{formatCurrency(gainsUsd)}</span>
+    </div>
+    <div className="flex items-center justify-between">
+      <span>Net Losses</span>
+      <span className="text-xl font-black text-red-500">-{formatCurrency(lossesUsd)}</span>
+    </div>
+    <div className="flex items-center justify-between border-t pt-3">
+      <span className="text-lg font-black">Balance</span>
+      <span className={`text-xl font-black ${
+        balanceUsd >= 0 ? 'text-[#2bee79]' : 'text-red-500'
+      }`}>
+        {formatCurrency(balanceUsd)}
+      </span>
+    </div>
+  </div>
+</div>
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Chart Helpers" icon="chart-line" href="/api/utils/chart-helpers">
+    SVG path generation for multi-line charts
+  </Card>
+  <Card title="Market API" icon="plug" href="/api/services/market-api">
+    Historical price data fetching
+  </Card>
+  <Card title="Formatters" icon="hashtag" href="/api/utils/formatters">
+    Currency and percentage formatting
+  </Card>
+  <Card title="Portfolio API" icon="briefcase" href="/api/services/portfolio-api">
+    Portfolio position calculations
+  </Card>
+</CardGroup>

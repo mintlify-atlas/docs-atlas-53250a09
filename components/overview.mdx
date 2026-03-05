@@ -1,0 +1,212 @@
+---
+title: Component Architecture Overview
+description: Understanding the component structure and design patterns in CryptoDash
+---
+
+## Introduction
+
+CryptoDash is built with a modular React component architecture that separates concerns into layout, common utilities, and feature-specific components. This structure promotes reusability, maintainability, and consistent user experience across the application.
+
+## Component Categories
+
+### Layout Components
+
+Layout components provide the structural foundation of the application:
+
+- **Sidebar** - Main navigation menu with responsive mobile overlay
+- **TopBar** - Application header with market stats and user controls
+- **DashboardLayout** - Wrapper component that combines Sidebar and TopBar
+
+See the [Layout Components](/components/layout) page for detailed documentation.
+
+### Common Components
+
+Reusable utility components used throughout the application:
+
+- **SkeletonLoader** - Loading state placeholders with multiple variants
+- **ToastContainer** - Global notification system
+- **ErrorBoundary** - Error handling wrapper component
+- **CountUpValue** - Animated number transitions
+
+See the [Common Components](/components/common) page for detailed documentation.
+
+### Chart Components
+
+Data visualization components for displaying cryptocurrency performance:
+
+- **MainPerformanceChart** - Primary dashboard chart with interactive tooltips
+- **PortfolioPerformanceChart** - Portfolio value tracking with area fill
+
+See the [Chart Components](/components/charts) page for detailed documentation.
+
+## Design Patterns
+
+### Composition
+
+Components are designed to be composed together. For example, the `DashboardLayout` component:
+
+```jsx
+import Sidebar from '../components/layout/Sidebar'
+import TopBar from '../components/layout/TopBar'
+import ToastContainer from '../components/common/ToastContainer'
+
+export default function DashboardLayout() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <main className="flex min-w-0 flex-1 flex-col">
+        <TopBar onMenuClick={() => setIsMobileMenuOpen(true)} />
+        <Outlet />
+      </main>
+      <ToastContainer />
+    </div>
+  )
+}
+```
+
+### Context Integration
+
+Many components leverage React Context for shared state:
+
+- **SettingsContext** - Theme and language preferences
+- **ToastContext** - Global notification management
+
+```jsx
+import { useToast } from '../../contexts/ToastContext'
+
+function MyComponent() {
+  const { success, error } = useToast()
+  
+  const handleAction = async () => {
+    try {
+      await saveData()
+      success('Data saved successfully!')
+    } catch (err) {
+      error('Failed to save data')
+    }
+  }
+}
+```
+
+### Custom Hooks
+
+Components use custom hooks for reusable logic:
+
+- `useTranslations()` - i18n support
+- `useChartTooltip()` - Interactive chart tooltips
+- `useSettings()` - Theme and language controls
+- `useDashboardData()` - Dashboard data fetching
+
+### Responsive Design
+
+All components are built mobile-first with responsive breakpoints:
+
+- `sm:` - Small devices (640px+)
+- `md:` - Medium devices (768px+)
+- `lg:` - Large devices (1024px+)
+
+### Dark Mode Support
+
+Every component includes dark mode variants using Tailwind's `dark:` prefix:
+
+```jsx
+<div className="bg-white dark:bg-[#14281d]">
+  <h1 className="text-slate-900 dark:text-slate-100">Title</h1>
+</div>
+```
+
+## Component File Structure
+
+```
+src/components/
+├── common/           # Shared utility components
+│   ├── CountUpValue.jsx
+│   ├── ErrorBoundary.jsx
+│   ├── SkeletonLoader.jsx
+│   └── ToastContainer.jsx
+├── dashboard/        # Dashboard-specific components
+│   ├── MainPerformanceChart.jsx
+│   ├── MarketTable.jsx
+│   └── SummaryCardsGrid.jsx
+├── layout/           # Layout structure components
+│   ├── Sidebar.jsx
+│   └── TopBar.jsx
+├── market/           # Market page components
+├── portfolio/        # Portfolio page components
+│   ├── PortfolioAssetsTable.jsx
+│   └── PortfolioPerformanceChart.jsx
+└── transactions/     # Transaction page components
+```
+
+## Styling Conventions
+
+### Tailwind CSS
+
+CryptoDash uses Tailwind CSS for all styling with a custom color palette:
+
+- **Primary Brand**: `#2bee79` (bright green)
+- **Dark Background**: `#102217`
+- **Dark Cards**: `#14281d`
+- **Dark Borders**: `#1a2e23`
+
+### Material Symbols
+
+Icons are implemented using Material Symbols:
+
+```jsx
+<span className="material-symbols-outlined">rocket_launch</span>
+```
+
+## Best Practices
+
+### Props Documentation
+
+Always destructure props with default values:
+
+```jsx
+export default function MyComponent({ 
+  value = 0, 
+  formatter,
+  className = '' 
+}) {
+  // component logic
+}
+```
+
+### Loading States
+
+Use skeleton loaders for better perceived performance:
+
+```jsx
+if (loading) {
+  return <DashboardCardSkeleton />
+}
+```
+
+### Error Handling
+
+Wrap component trees in ErrorBoundary:
+
+```jsx
+<ErrorBoundary>
+  <App />
+</ErrorBoundary>
+```
+
+### Accessibility
+
+Include ARIA labels and semantic HTML:
+
+```jsx
+<button aria-label="Close menu" onClick={onClose}>
+  <span className="material-symbols-outlined">close</span>
+</button>
+```
+
+## Next Steps
+
+- [Layout Components](/components/layout) - Learn about Sidebar and TopBar
+- [Common Components](/components/common) - Explore utility components
+- [Chart Components](/components/charts) - Build data visualizations

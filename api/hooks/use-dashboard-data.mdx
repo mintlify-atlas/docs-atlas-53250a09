@@ -1,0 +1,257 @@
+---
+title: 'useDashboardData'
+description: 'Custom React hook for fetching and managing comprehensive dashboard data including market statistics, portfolio information, and performance metrics'
+---
+
+## Overview
+
+The `useDashboardData` hook is the primary data management hook for the CryptoDash application. It fetches global market statistics, top market coins, Bitcoin performance data, and manages portfolio state. The hook provides comprehensive dashboard data with formatted values ready for display.
+
+## Import
+
+```javascript
+import { useDashboardData } from '../hooks/useDashboardData'
+```
+
+## Signature
+
+```javascript
+function useDashboardData(): DashboardData
+```
+
+## Return Value
+
+Returns an object containing all dashboard state and functions:
+
+<ResponseField name="loading" type="boolean">
+  Loading state indicator for initial data fetch
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if data fetching fails
+</ResponseField>
+
+<ResponseField name="marketCapValue" type="string">
+  Formatted global market capitalization (e.g., "$2.5T")
+</ResponseField>
+
+<ResponseField name="marketCapChange" type="string">
+  Formatted 24h market cap change percentage (e.g., "+2.34%")
+</ResponseField>
+
+<ResponseField name="marketCapPositive" type="boolean">
+  Whether the market cap change is positive or negative
+</ResponseField>
+
+<ResponseField name="volumeValue" type="string">
+  Formatted global trading volume (e.g., "$120.5B")
+</ResponseField>
+
+<ResponseField name="summaryCards" type="array">
+  Array of summary card data objects, each containing:
+  - `title`: Card title (e.g., "Total Portfolio Balance")
+  - `value`: Formatted display value
+  - `change`: Formatted percentage change
+  - `positive`: Boolean indicating positive/negative change
+  - `path`: SVG path for sparkline chart
+</ResponseField>
+
+<ResponseField name="marketRows" type="array">
+  Array of market table row data, each containing:
+  - `rank`: Market cap rank
+  - `name`: Coin name
+  - `symbol`: Coin symbol (uppercase)
+  - `price`: Formatted price
+  - `change`: Formatted 24h change percentage
+  - `positive`: Boolean for change direction
+  - `marketCap`: Formatted market cap
+  - `volume`: Formatted volume
+  - `iconBg`, `iconColor`, `icon`: Icon styling data
+  - `trendPath`: SVG path for 7-day trend
+</ResponseField>
+
+<ResponseField name="mainPerformancePath" type="string">
+  SVG path string for Bitcoin 30-day performance chart
+</ResponseField>
+
+<ResponseField name="mainPerformanceSeries" type="array">
+  Raw Bitcoin price data points for the chart
+</ResponseField>
+
+<ResponseField name="mainPerformancePriceLabel" type="string">
+  Formatted current Bitcoin price
+</ResponseField>
+
+<ResponseField name="mainPerformanceChangeLabel" type="string">
+  Formatted Bitcoin price change percentage
+</ResponseField>
+
+<ResponseField name="mainPerformancePositive" type="boolean">
+  Whether Bitcoin performance is positive
+</ResponseField>
+
+<ResponseField name="markets" type="array">
+  Raw market data array from the API
+</ResponseField>
+
+<ResponseField name="primaryPortfolio" type="object">
+  Current user's primary portfolio object with positions
+</ResponseField>
+
+<ResponseField name="portfolioPerformancePath" type="string">
+  SVG path for portfolio performance chart
+</ResponseField>
+
+<ResponseField name="portfolioPerformanceSeries" type="array">
+  Portfolio value data points over time
+</ResponseField>
+
+<ResponseField name="portfolioPerformancePriceLabel" type="string">
+  Formatted current portfolio value
+</ResponseField>
+
+<ResponseField name="portfolioPerformanceChangeLabel" type="string">
+  Formatted portfolio change percentage
+</ResponseField>
+
+<ResponseField name="portfolioPerformancePositive" type="boolean">
+  Whether portfolio performance is positive
+</ResponseField>
+
+<ResponseField name="defaultPortfolioAllocationUsd" type="number">
+  Default USD allocation amount for adding new assets
+</ResponseField>
+
+<ResponseField name="portfolioSummary" type="object">
+  Portfolio summary object containing:
+  - `name`: Portfolio name
+  - `totalValueUsd`: Total portfolio value in USD
+  - `investedUsd`: Total invested amount
+  - `change24hUsd`: 24-hour change in USD
+  - `change24hPercent`: 24-hour change percentage
+</ResponseField>
+
+<ResponseField name="addAssetToPortfolio" type="function">
+  Async function to add an asset to the portfolio. See below for details.
+</ResponseField>
+
+## Functions
+
+### addAssetToPortfolio
+
+Adds a cryptocurrency asset to the user's primary portfolio.
+
+**Signature:**
+```javascript
+async function addAssetToPortfolio({ assetId, allocationUsd }): Promise<Portfolio>
+```
+
+<ParamField path="assetId" type="string" required>
+  The cryptocurrency asset ID (e.g., "bitcoin", "ethereum")
+</ParamField>
+
+<ParamField path="allocationUsd" type="number">
+  USD amount to allocate for this asset. Defaults to `getDefaultAllocationUsd()`
+</ParamField>
+
+**Returns:** Promise that resolves to the updated portfolio object
+
+**Throws:** Error if asset ID is missing, asset not found, or portfolio update fails
+
+## Usage Example
+
+### Basic Usage in Layout
+
+```javascript useDashboardData.js:7-26
+import { useDashboardData } from '../hooks/useDashboardData'
+
+export default function DashboardLayout() {
+  const dashboardData = useDashboardData()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <TopBar
+          marketCapValue={dashboardData.marketCapValue}
+          marketCapChange={dashboardData.marketCapChange}
+          marketCapPositive={dashboardData.marketCapPositive}
+          volumeValue={dashboardData.volumeValue}
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+        />
+
+        <Outlet context={dashboardData} />
+      </main>
+    </div>
+  )
+}
+```
+
+### Adding Assets to Portfolio
+
+```javascript
+const { addAssetToPortfolio, defaultPortfolioAllocationUsd } = useDashboardData()
+
+const handleAddAsset = async () => {
+  try {
+    const updatedPortfolio = await addAssetToPortfolio({
+      assetId: 'ethereum',
+      allocationUsd: 1000 // or use defaultPortfolioAllocationUsd
+    })
+    console.log('Portfolio updated:', updatedPortfolio)
+  } catch (error) {
+    console.error('Failed to add asset:', error.message)
+  }
+}
+```
+
+### Accessing Market Data
+
+```javascript
+const { marketRows, loading, error } = useDashboardData()
+
+if (loading) return <LoadingSkeleton />
+if (error) return <ErrorMessage error={error} />
+
+return (
+  <table>
+    <tbody>
+      {marketRows.map((row) => (
+        <tr key={row.symbol}>
+          <td>{row.rank}</td>
+          <td>{row.name} ({row.symbol})</td>
+          <td>{row.price}</td>
+          <td className={row.positive ? 'positive' : 'negative'}>
+            {row.change}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)
+```
+
+## Implementation Details
+
+- **Data Sources**: Fetches from multiple APIs concurrently using `Promise.all`
+  - Global market statistics via `getGlobalStats()`
+  - Top market coins via `getTopMarketCoins()`
+  - Bitcoin 30-day chart via `getCoinPerformanceChart()`
+
+- **Portfolio Management**: Automatically creates or retrieves the user's primary portfolio
+
+- **Performance Calculation**: Builds portfolio performance series by combining position amounts with historical sparkline data
+
+- **Memoization**: Uses `useMemo` extensively to prevent unnecessary recalculations
+
+- **Cleanup**: Properly handles component unmounting to prevent state updates on unmounted components
+
+## Related Hooks
+
+- [useTranslations](/api/hooks/use-translations) - Used internally for error messages and labels
+
+## Source Location
+
+`/workspace/source/src/hooks/useDashboardData.js:45`

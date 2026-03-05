@@ -1,0 +1,301 @@
+---
+title: 'Market API'
+description: 'Market data, coin listings, and price chart functions'
+---
+
+## Overview
+
+The Market API provides functions for fetching cryptocurrency market data, including top coins by market cap, price information, and historical performance charts. It integrates with CoinGecko's `/coins/markets` and `/coins/{id}/market_chart` endpoints.
+
+**File location:** `src/api/market/marketApi.js`
+
+## Configuration
+
+The Market API uses the shared axios client with:
+
+- **Base URL:** CoinGecko API v3 (`https://api.coingecko.com/api/v3`)
+- **Timeout:** 10 seconds
+- **Authentication:** Optional CoinGecko Pro API key
+- **Caching:** 5-minute TTL per unique request with Map-based cache
+
+## Functions
+
+### getTopMarketCoins
+
+Fetches top cryptocurrencies by market cap with configurable filtering, sorting, and pagination.
+
+```javascript
+import { getTopMarketCoins } from './api/market/marketApi'
+
+const topCoins = await getTopMarketCoins({
+  vsCurrency: 'usd',
+  perPage: 10,
+  page: 1,
+  sparkline: true,
+  priceChangePercentage: '24h,7d'
+})
+
+console.log('Top coin:', topCoins[0].name)
+console.log('Price:', topCoins[0].current_price)
+```
+
+#### Signature
+
+```javascript
+getTopMarketCoins(options): Promise<Array<Object>>
+```
+
+#### Parameters
+
+<ParamField path="vsCurrency" type="string" default="usd">
+  Target currency for market data (e.g., `usd`, `eur`, `btc`)
+</ParamField>
+
+<ParamField path="order" type="string" default="market_cap_desc">
+  Sort order. Options:
+  - `market_cap_desc` - Market cap descending (default)
+  - `market_cap_asc` - Market cap ascending
+  - `volume_desc` - Volume descending
+  - `volume_asc` - Volume ascending
+  - `id_desc` - ID descending
+  - `id_asc` - ID ascending
+</ParamField>
+
+<ParamField path="perPage" type="number" default="10">
+  Number of results per page (1-250)
+</ParamField>
+
+<ParamField path="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField path="sparkline" type="boolean" default="true">
+  Include 7-day sparkline price data
+</ParamField>
+
+<ParamField path="priceChangePercentage" type="string" default="24h,7d">
+  Price change percentage timeframes (e.g., `24h`, `7d`, `24h,7d,30d`)
+</ParamField>
+
+#### Returns
+
+<ResponseField name="coins" type="array">
+  Array of coin market data objects
+
+  <ResponseField name="id" type="string">
+    Coin identifier (e.g., `bitcoin`, `ethereum`)
+  </ResponseField>
+
+  <ResponseField name="symbol" type="string">
+    Coin symbol (e.g., `btc`, `eth`)
+  </ResponseField>
+
+  <ResponseField name="name" type="string">
+    Coin name (e.g., `Bitcoin`, `Ethereum`)
+  </ResponseField>
+
+  <ResponseField name="image" type="string">
+    URL to coin image/logo
+  </ResponseField>
+
+  <ResponseField name="current_price" type="number">
+    Current price in target currency
+  </ResponseField>
+
+  <ResponseField name="market_cap" type="number">
+    Market capitalization in target currency
+  </ResponseField>
+
+  <ResponseField name="market_cap_rank" type="number">
+    Market cap rank (1 = highest)
+  </ResponseField>
+
+  <ResponseField name="total_volume" type="number">
+    24-hour trading volume
+  </ResponseField>
+
+  <ResponseField name="price_change_percentage_24h" type="number">
+    24-hour price change percentage
+  </ResponseField>
+
+  <ResponseField name="price_change_percentage_7d_in_currency" type="number">
+    7-day price change percentage (if requested)
+  </ResponseField>
+
+  <ResponseField name="sparkline_in_7d" type="object">
+    7-day price sparkline data
+
+    <ResponseField name="price" type="array">
+      Array of price points for sparkline chart
+    </ResponseField>
+  </ResponseField>
+
+  <ResponseField name="circulating_supply" type="number">
+    Circulating supply of the coin
+  </ResponseField>
+
+  <ResponseField name="total_supply" type="number">
+    Total supply of the coin
+  </ResponseField>
+
+  <ResponseField name="max_supply" type="number">
+    Maximum supply (null if unlimited)
+  </ResponseField>
+</ResponseField>
+
+#### Example Response
+
+```json
+[
+  {
+    "id": "bitcoin",
+    "symbol": "btc",
+    "name": "Bitcoin",
+    "image": "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+    "current_price": 45000,
+    "market_cap": 850000000000,
+    "market_cap_rank": 1,
+    "total_volume": 25000000000,
+    "price_change_percentage_24h": 2.5,
+    "price_change_percentage_7d_in_currency": 5.2,
+    "sparkline_in_7d": {
+      "price": [43000, 43500, 44000, ...]
+    }
+  }
+]
+```
+
+### getCoinPerformanceChart
+
+Fetches historical price data for a specific cryptocurrency to generate performance charts.
+
+```javascript
+import { getCoinPerformanceChart } from './api/market/marketApi'
+
+const chartData = await getCoinPerformanceChart({
+  coinId: 'bitcoin',
+  vsCurrency: 'usd',
+  days: 30
+})
+
+console.log('Price history:', chartData.prices)
+console.log('First data point:', chartData.prices[0]) // [timestamp, price]
+```
+
+#### Signature
+
+```javascript
+getCoinPerformanceChart(options): Promise<Object>
+```
+
+#### Parameters
+
+<ParamField path="coinId" type="string" default="bitcoin">
+  Coin identifier (e.g., `bitcoin`, `ethereum`, `solana`)
+</ParamField>
+
+<ParamField path="vsCurrency" type="string" default="usd">
+  Target currency for price data
+</ParamField>
+
+<ParamField path="days" type="number | string" default="30">
+  Number of days of historical data. Options:
+  - `1`, `7`, `14`, `30`, `90`, `180`, `365`
+  - `max` - All available data
+</ParamField>
+
+#### Returns
+
+<ResponseField name="chartData" type="object">
+  Historical market data
+
+  <ResponseField name="prices" type="array">
+    Array of `[timestamp, price]` pairs
+  </ResponseField>
+
+  <ResponseField name="market_caps" type="array">
+    Array of `[timestamp, market_cap]` pairs
+  </ResponseField>
+
+  <ResponseField name="total_volumes" type="array">
+    Array of `[timestamp, volume]` pairs
+  </ResponseField>
+</ResponseField>
+
+#### Example Response
+
+```json
+{
+  "prices": [
+    [1709596800000, 45000.50],
+    [1709683200000, 45500.25],
+    [1709769600000, 46000.75]
+  ],
+  "market_caps": [
+    [1709596800000, 850000000000],
+    [1709683200000, 860000000000]
+  ],
+  "total_volumes": [
+    [1709596800000, 25000000000],
+    [1709683200000, 26000000000]
+  ]
+}
+```
+
+## Caching Behavior
+
+Both functions use Map-based caching with intelligent deduplication:
+
+- **Cache TTL:** 5 minutes (`MARKET_CACHE_TTL_MS = 5 * 60 * 1000`)
+- **Cache key:** JSON stringified request parameters
+- **In-flight deduplication:** Same requests share the same promise
+- **Cache invalidation:** Automatic on TTL expiry or request error
+
+```javascript
+// Different parameters = different cache entries
+const btcData = await getTopMarketCoins({ perPage: 10, page: 1 })
+const ethData = await getTopMarketCoins({ perPage: 20, page: 1 })
+
+// Same parameters within 5 min = cached result
+const cachedBtcData = await getTopMarketCoins({ perPage: 10, page: 1 })
+```
+
+## API Endpoints
+
+### Top Market Coins
+
+**CoinGecko Endpoint:** `GET /coins/markets`
+
+**Query Parameters:**
+- `vs_currency` - Target currency
+- `order` - Sort order
+- `per_page` - Results per page
+- `page` - Page number
+- `sparkline` - Include sparkline
+- `price_change_percentage` - Change timeframes
+
+### Performance Chart
+
+**CoinGecko Endpoint:** `GET /coins/{id}/market_chart`
+
+**Path Parameters:**
+- `{id}` - Coin identifier
+
+**Query Parameters:**
+- `vs_currency` - Target currency
+- `days` - Number of days
+
+## Error Handling
+
+```javascript
+try {
+  const coins = await getTopMarketCoins({ perPage: 10 })
+} catch (error) {
+  // Normalized error structure
+  console.error('HTTP Status:', error.status)
+  console.error('Error Message:', error.message)
+  console.error('Response Data:', error.data)
+}
+```
+
+All errors are normalized by the axios interceptor in `src/api/axios.js:35-46`.

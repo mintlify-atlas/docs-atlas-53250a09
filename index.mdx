@@ -1,97 +1,108 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "CryptoDash Documentation"
+description: "A modern cryptocurrency portfolio tracker with real-time market data, interactive charts, and comprehensive portfolio management"
 ---
 
-## Setting up
+<div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+  <div className="p-12 text-center" style={{backgroundColor: '#94cb04'}}>
+    <h1 className="text-5xl font-bold text-white mb-4">CryptoDash</h1>
+    <p className="text-xl text-white/90 mb-8">Track your crypto portfolio with real-time data, interactive charts, and powerful analytics</p>
+    <div className="flex gap-4 justify-center">
+      <a href="/quickstart" className="inline-block px-6 py-3 bg-white text-gray-900 font-semibold rounded-md hover:bg-gray-100 transition-colors">
+        Get Started
+      </a>
+      <a href="https://github.com/peLuis123/cryptodash" className="inline-block px-6 py-3 bg-gray-800 text-white font-semibold rounded-md hover:bg-gray-700 transition-colors">
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## Key Features
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+CryptoDash is a professional-grade cryptocurrency dashboard built with React, offering comprehensive portfolio tracking and market analysis tools.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Real-time Market Data" icon="chart-line" href="/features/market-explorer">
+    Track 2,500+ cryptocurrencies with live prices from CoinGecko API
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Portfolio Management" icon="wallet" href="/features/portfolio">
+    Monitor your holdings with detailed performance analytics and allocation insights
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Interactive Charts" icon="chart-area" href="/components/charts">
+    Hover-enabled charts with tooltips showing exact values and price trends
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Analysis Tools" icon="magnifying-glass-chart" href="/features/analysis-tools">
+    Volatility metrics, performance comparison, and statistical insights
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Start
 
-Everything you need to create world-class documentation.
+Get up and running with CryptoDash in minutes.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Steps>
+  <Step title="Install Dependencies">
+    Clone the repository and install dependencies with npm, yarn, or pnpm
+    
+    ```bash
+    git clone https://github.com/peLuis123/cryptodash.git
+    cd cryptodash
+    npm install
+    ```
+  </Step>
+  <Step title="Start Development Server">
+    Launch the development server with hot reload
+    
+    ```bash
+    npm run dev
+    ```
+  </Step>
+  <Step title="Open in Browser">
+    Navigate to `http://localhost:5173` to see your dashboard
+  </Step>
+</Steps>
 
-## Need inspiration?
+## Core Features
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Explore the powerful features that make CryptoDash stand out.
+
+<CardGroup cols={3}>
+  <Card title="Dashboard" icon="grid" href="/features/dashboard">
+    Summary cards, performance charts, and market overview
+  </Card>
+  <Card title="Portfolio" icon="briefcase" href="/features/portfolio">
+    Track assets, view allocation, and export to CSV
+  </Card>
+  <Card title="Market Explorer" icon="store" href="/features/market-explorer">
+    Browse and search 2,500+ cryptocurrencies
+  </Card>
+  <Card title="Transactions" icon="arrows-rotate" href="/features/transactions">
+    Complete transaction history with filtering
+  </Card>
+  <Card title="Analysis" icon="chart-mixed" href="/features/analysis-tools">
+    Volatility analysis and performance metrics
+  </Card>
+  <Card title="Theming" icon="palette" href="/development/theming">
+    Dark/light mode with smooth transitions
+  </Card>
+</CardGroup>
+
+## Developer Resources
+
+Build on top of CryptoDash or customize it to your needs.
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the codebase organization
+  </Card>
+  <Card title="API Integration" icon="plug" href="/development/api-integration">
+    Learn how we fetch data from CoinGecko
+  </Card>
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Context API and custom hooks
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/components/overview">
+    Reusable React components
+  </Card>
+</CardGroup>

@@ -1,80 +1,443 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get up and running with CryptoDash in minutes. Learn the basics of navigating the dashboard and using key features.
 ---
 
-## Get started in three steps
+## Get Started in 3 Steps
 
-Get your documentation site running locally and make your first customization.
+This guide will help you go from installation to using CryptoDash's core features in just a few minutes.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Start the Development Server">
+    If you haven't already, start the development server:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    <CodeGroup>
+    ```bash npm
+    npm run dev
+    ```
 
-### Step 2: Deploy your changes
+    ```bash yarn
+    yarn dev
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash pnpm
+    pnpm dev
+    ```
+    </CodeGroup>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    Open your browser and navigate to `http://localhost:5173`
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Explore the Dashboard">
+    The dashboard is your central hub for monitoring cryptocurrency markets:
 
-### Step 3: Go live
+    - **Summary Cards**: View total balance, 24h change, profit/loss, and total assets
+    - **Performance Chart**: Interactive Bitcoin price chart with hover tooltips
+    - **Market Table**: Top cryptocurrencies with real-time prices and 7-day sparklines
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Navigate the Application">
+    Use the sidebar to explore different sections:
 
-## Next steps
+    - **Dashboard**: Overview of your portfolio and market highlights
+    - **Portfolio**: Manage your crypto holdings
+    - **Market**: Browse and search 2,500+ cryptocurrencies
+    - **Analysis**: Analyze volatility and compare assets
+    - **Transactions**: View transaction history
+    - **Settings**: Customize theme and language preferences
+  </Step>
+</Steps>
 
-Now that you have your docs running, explore these key features:
+## Understanding the Application Structure
 
-<CardGroup cols={2}>
+CryptoDash is built with React and follows a component-based architecture. Here's how the core pieces work together:
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+### Entry Point
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+The application starts in `src/main.jsx`, which sets up the React app with necessary providers:
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+```jsx src/main.jsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+import { SettingsProvider } from './contexts/SettingsContext'
+import { ToastProvider } from './contexts/ToastContext'
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <SettingsProvider>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </SettingsProvider>
+  </StrictMode>,
+)
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The app uses **Context API** for global state management. `SettingsProvider` manages theme and language, while `ToastProvider` handles notifications.
 </Note>
+
+### API Configuration
+
+CryptoDash uses Axios to communicate with the CoinGecko API. The API client is configured in `src/api/axios.js`:
+
+```javascript src/api/axios.js
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_COINGECKO_BASE_URL ?? 
+  'https://api.coingecko.com/api/v3'
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT ?? 10000)
+const API_KEY = import.meta.env.VITE_COINGECKO_API_KEY
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
+})
+
+// Request interceptor - adds headers and API key
+apiClient.interceptors.request.use(
+  (config) => {
+    const nextConfig = { ...config }
+
+    nextConfig.headers = {
+      Accept: 'application/json',
+      ...nextConfig.headers,
+    }
+
+    if (API_KEY) {
+      nextConfig.headers['x-cg-pro-api-key'] = API_KEY
+    }
+
+    return nextConfig
+  },
+  (error) => Promise.reject(error),
+)
+
+// Response interceptor - normalizes errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const normalizedError = {
+      status: error.response?.status ?? 0,
+      message: error.response?.data?.error || 
+               error.response?.data?.message || 
+               error.message || 
+               'Unexpected API error',
+      data: error.response?.data,
+      original: error,
+    }
+    return Promise.reject(normalizedError)
+  },
+)
+
+export default apiClient
+```
+
+<Tip>
+  The API client uses **interceptors** to automatically add headers and normalize error responses, making error handling consistent throughout the app.
+</Tip>
+
+## Core Features Walkthrough
+
+### Theme Switching (Dark/Light Mode)
+
+CryptoDash includes a sophisticated theme system managed by the Settings Context:
+
+```jsx src/contexts/SettingsContext.jsx (excerpt)
+import { createContext, useContext, useState, useEffect } from 'react'
+
+const SettingsContext = createContext()
+
+export function SettingsProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('crypto-dash-theme')
+    return saved || 'dark'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('crypto-dash-theme', theme)
+    
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  }
+
+  return (
+    <SettingsContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </SettingsContext.Provider>
+  )
+}
+
+export function useSettings() {
+  const context = useContext(SettingsContext)
+  if (!context) {
+    throw new Error('useSettings must be used within SettingsProvider')
+  }
+  return context
+}
+```
+
+**How to use theme in your components:**
+
+```jsx Example Component
+import { useSettings } from './contexts/SettingsContext'
+
+function MyComponent() {
+  const { theme, toggleTheme } = useSettings()
+
+  return (
+    <button onClick={toggleTheme}>
+      Current theme: {theme}
+    </button>
+  )
+}
+```
+
+### Using the Dashboard
+
+<Steps>
+  <Step title="View Market Overview">
+    The dashboard displays 4 key metrics at the top:
+
+    - **Total Balance**: Sum of all portfolio holdings
+    - **24h Change**: Percentage change in the last 24 hours
+    - **Profit/Loss**: Total profit or loss from your positions
+    - **Total Assets**: Number of different cryptocurrencies you own
+
+    These cards update automatically when market data refreshes.
+  </Step>
+
+  <Step title="Interact with the Price Chart">
+    The performance chart shows Bitcoin's price over time:
+
+    - **Hover**: Move your mouse over the chart to see exact prices at specific times
+    - **Tooltips**: A tooltip appears showing the date and price
+    - **Responsive**: The chart adapts to different screen sizes
+  </Step>
+
+  <Step title="Browse Top Cryptocurrencies">
+    The market table shows the top cryptocurrencies with:
+
+    - Real-time prices
+    - 24h change percentage (color-coded: green for gains, red for losses)
+    - 7-day sparkline charts
+    - Market cap and volume data
+
+    Click on any cryptocurrency to view more details.
+  </Step>
+</Steps>
+
+### Managing Your Portfolio
+
+<Steps>
+  <Step title="Navigate to Portfolio">
+    Click on **Portfolio** in the sidebar to access portfolio management features.
+  </Step>
+
+  <Step title="Add Assets">
+    Click the **Add Asset** button to add a cryptocurrency to your portfolio:
+
+    - Select the cryptocurrency from the dropdown
+    - Enter the amount you own
+    - Enter the purchase price (optional)
+    - Click **Add** to save
+  </Step>
+
+  <Step title="View Performance">
+    The portfolio page displays:
+
+    - **30-day Performance Chart**: Visual representation of your portfolio value over time
+    - **Asset Allocation**: Pie chart showing distribution of holdings
+    - **Strongest Performers**: List of assets with the highest gains
+    - **Total Value**: Current value of your entire portfolio
+  </Step>
+
+  <Step title="Export Data">
+    Click the **Export CSV** button to download your portfolio data:
+
+    - Includes all assets with current values
+    - Properly formatted for spreadsheet applications
+    - Contains purchase price, current price, and profit/loss data
+  </Step>
+</Steps>
+
+### Exploring the Market
+
+The Market page lets you browse and search over 2,500 cryptocurrencies:
+
+<Steps>
+  <Step title="Search for Assets">
+    Use the search bar at the top to find specific cryptocurrencies:
+
+    ```
+    Type "Bitcoin" or "BTC" to find Bitcoin
+    Results appear instantly as you type
+    ```
+  </Step>
+
+  <Step title="Apply Filters">
+    Filter cryptocurrencies by:
+
+    - **Market Cap**: Sort by market capitalization
+    - **Volume**: Filter by 24h trading volume
+    - **24h Change**: Show only gainers or losers
+  </Step>
+
+  <Step title="View Asset Details">
+    Click on any cryptocurrency to open a side drawer with:
+
+    - Detailed price information
+    - Market statistics
+    - Historical performance
+    - Social media links
+    - Description and website
+  </Step>
+</Steps>
+
+### Customizing Settings
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Click on **Settings** in the sidebar.
+  </Step>
+
+  <Step title="Change Theme">
+    Toggle between dark and light mode:
+
+    - Click the theme toggle switch
+    - The change applies instantly
+    - Your preference is saved to localStorage
+  </Step>
+
+  <Step title="Change Language">
+    Switch between English and Spanish:
+
+    - Click the language dropdown
+    - Select your preferred language
+    - All UI text updates immediately
+  </Step>
+</Steps>
+
+## Mobile Experience
+
+CryptoDash is fully responsive and optimized for mobile devices:
+
+- **Hamburger Menu**: The sidebar collapses into a hamburger menu on mobile
+- **Touch-Friendly**: All buttons and interactive elements are sized for touch
+- **Horizontal Scroll**: Tables scroll horizontally on small screens
+- **Optimized Charts**: Charts adapt to mobile screen sizes
+
+<Note>
+  To test mobile view during development, use your browser's device emulation tools (F12 → Toggle Device Toolbar in Chrome).
+</Note>
+
+## Common Tasks
+
+### Adding a New Page
+
+To add a new page to CryptoDash:
+
+1. Create a new component in `src/pages/`
+2. Add the route to `src/router/AppRouter.jsx`
+3. Update navigation in `src/constants/navigation.js`
+4. Add translations in `src/i18n/translations.js`
+
+### Making API Calls
+
+Use the configured API client for all API calls:
+
+```javascript Example API Call
+import apiClient from '../api/axios'
+
+export async function fetchMarketData() {
+  try {
+    const response = await apiClient.get('/coins/markets', {
+      params: {
+        vs_currency: 'usd',
+        order: 'market_cap_desc',
+        per_page: 100,
+        page: 1,
+      },
+    })
+    return response.data
+  } catch (error) {
+    console.error('Failed to fetch market data:', error.message)
+    throw error
+  }
+}
+```
+
+### Using Custom Hooks
+
+CryptoDash provides several custom hooks for common tasks:
+
+```javascript Using Custom Hooks
+import { useTranslations } from '../hooks/useTranslations'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDashboardData } from '../hooks/useDashboardData'
+
+function MyComponent() {
+  const { t } = useTranslations()
+  useDocumentTitle('My Page Title')
+  const { data, loading, error } = useDashboardData()
+
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error}</div>
+
+  return <div>{t('welcome_message')}</div>
+}
+```
+
+## Development Tips
+
+<Tip>
+  **Hot Module Replacement**: Vite automatically refreshes your browser when you save changes. No need to manually refresh!
+</Tip>
+
+<Tip>
+  **Error Boundaries**: CryptoDash includes error boundaries that catch React errors and display user-friendly messages. Check the browser console for detailed error information during development.
+</Tip>
+
+<Tip>
+  **localStorage**: User preferences (theme, language) are stored in localStorage. Clear it during development if you need to reset to defaults:
+  ```javascript
+  localStorage.clear()
+  ```
+</Tip>
+
+## Next Steps
+
+Now that you're familiar with CryptoDash basics, you can:
+
+<CardGroup cols={2}>
+  <Card title="Customize Components" icon="code">
+    Explore the `src/components/` directory to modify existing components or create new ones
+  </Card>
+  <Card title="Add Features" icon="plus">
+    Build new features using the established patterns for API calls, state management, and routing
+  </Card>
+  <Card title="Deploy to Production" icon="rocket">
+    Create a production build and deploy to services like Vercel, Netlify, or GitHub Pages
+  </Card>
+  <Card title="Explore the API" icon="book">
+    Check out the [CoinGecko API docs](https://www.coingecko.com/api/documentation) to discover additional endpoints
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you encounter issues:
+
+- Check the browser console for error messages
+- Review the troubleshooting section in the [Installation Guide](/installation)
+- Ensure all dependencies are properly installed
+- Verify that the CoinGecko API is accessible from your network

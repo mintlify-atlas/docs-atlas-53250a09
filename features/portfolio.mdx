@@ -1,0 +1,329 @@
+---
+title: Portfolio Management
+description: Track your cryptocurrency holdings, view performance analytics, and manage your asset allocation
+---
+
+## Overview
+
+The Portfolio feature provides comprehensive tracking and management of your cryptocurrency holdings. View your total portfolio value, individual asset performance, 30-day trends, and add or remove assets with real-time price updates from CoinGecko.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Real-time Valuation" icon="wallet">
+    See your total portfolio value updated with live market prices
+  </Card>
+  <Card title="Performance Tracking" icon="chart-line">
+    30-day performance chart with trend visualization
+  </Card>
+  <Card title="Asset Management" icon="circle-plus">
+    Add new assets or remove existing holdings
+  </Card>
+  <Card title="CSV Export" icon="download">
+    Export your portfolio data to CSV for external analysis
+  </Card>
+</CardGroup>
+
+## Portfolio Overview
+
+### Total Value Card
+
+The main portfolio card displays:
+
+- **Total Value**: Aggregated USD value of all holdings
+- **24h Change**: Dollar and percentage change in the last 24 hours
+- **30-day Sparkline**: Miniature trend chart showing value over time
+- **Top Allocations**: Your top 4 holdings by allocation percentage
+
+```jsx PortfolioPage.jsx:274-315
+<div className="xl:col-span-2 rounded-2xl border p-8">
+  <p className="text-sm font-medium">Total Value</p>
+  <h3 className="mt-2 text-4xl font-black">
+    <CountUpValue value={portfolioSummary.totalValueUsd} formatter={formatCurrency} />
+  </h3>
+
+  <div className="mt-4 flex flex-wrap items-center gap-3">
+    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-bold ${
+      portfolioSummary.change24hUsd >= 0 ? 'bg-[#2bee79]/10 text-[#2bee79]' : 'bg-red-500/10 text-red-500'
+    }`}>
+      <CountUpValue value={portfolioSummary.change24hUsd} formatter={formatCompactCurrency} />
+    </span>
+  </div>
+
+  {/* 30-day sparkline */}
+  <div className="mt-10 h-24 w-full sm:w-72">
+    <svg className="h-full w-full text-[#2bee79]" viewBox="0 0 100 30">
+      <path d={portfolioPerformancePath} fill="none" stroke="currentColor" />
+    </svg>
+  </div>
+
+  {/* Top 4 allocations */}
+  <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2">
+    {topAllocation.map((row) => (
+      <div key={row.assetId} className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-[#2bee79]" />
+        <span className="text-xs font-bold">
+          {row.symbol} {row.allocationPercent.toFixed(1)}%
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
+```
+
+### Strongest Asset Card
+
+Displays your best-performing asset over the past 7 days:
+
+- Asset name
+- 7-day change percentage
+- Rocket icon indicating top performer
+
+## Performance Chart
+
+The 30-day portfolio performance chart shows:
+
+- **Line Chart**: Your portfolio value over the last 30 days
+- **Interactive Tooltip**: Hover to see exact value at any point
+- **Gradient Fill**: Area under the line filled with subtle color
+- **Change Badge**: Percentage gain/loss for the period
+
+### Implementation
+
+```jsx PortfolioPage.jsx:340-346
+<PortfolioPerformanceChart
+  chartPath={portfolioPerformancePath}
+  chartData={portfolioPerformanceSeries}
+  totalValueLabel={portfolioPerformancePriceLabel}
+  changeLabel={portfolioPerformanceChangeLabel}
+  positive={portfolioPerformancePositive}
+/>
+```
+
+The chart data comes from the `useDashboardData` hook, which calculates portfolio value over time by:
+
+1. Fetching historical prices for each asset from CoinGecko
+2. Multiplying each asset's amount by its price at each timestamp
+3. Summing all asset values to get total portfolio value
+
+<Info>
+The performance chart uses the `useChartTooltip` hook for interactive hover effects.
+</Info>
+
+## Asset Management
+
+### Adding Assets
+
+Add new cryptocurrencies to your portfolio:
+
+<Steps>
+  <Step title="Select Asset">
+    Choose from 2,500+ cryptocurrencies in the dropdown menu
+    
+    ```jsx PortfolioPage.jsx:234-245
+    <select
+      value={newAssetId}
+      onChange={(event) => setNewAssetId(event.target.value)}
+    >
+      <option value="">Select Asset</option>
+      {availableAssets.map((coin) => (
+        <option key={coin.id} value={coin.id}>
+          {coin.name} ({coin.symbol?.toUpperCase()})
+        </option>
+      ))}
+    </select>
+    ```
+  </Step>
+  <Step title="Set Allocation">
+    Enter the USD amount you want to invest (defaults to $500)
+    
+    ```jsx PortfolioPage.jsx:246-254
+    <input
+      type="number"
+      min="1"
+      step="50"
+      value={newAllocationUsd}
+      onChange={(event) => setNewAllocationUsd(event.target.value)}
+      placeholder="USD"
+    />
+    ```
+  </Step>
+  <Step title="Add to Portfolio">
+    Click the Add Asset button to calculate position size and update portfolio
+    
+    ```javascript PortfolioPage.jsx:127-147
+    async function handleAddAsset() {
+      if (!newAssetId) {
+        setAddAssetError(t.portfolio.selectAsset)
+        return
+      }
+
+      try {
+        setIsAddingAsset(true)
+        setAddAssetError('')
+        await addAssetToPortfolio({
+          assetId: newAssetId,
+          allocationUsd: Number(newAllocationUsd) || defaultPortfolioAllocationUsd,
+        })
+        setNewAssetId('')
+        setNewAllocationUsd(defaultPortfolioAllocationUsd)
+      } catch (addError) {
+        setAddAssetError(addError?.message ?? t.common.errors.updatePortfolio)
+      } finally {
+        setIsAddingAsset(false)
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+<Note>
+Position sizes are calculated automatically: `amount = investedUsd / currentPrice`
+</Note>
+
+### Portfolio Assets Table
+
+View all your holdings in a sortable, searchable table:
+
+```jsx PortfolioPage.jsx:348-374
+<section className="flex flex-col items-center gap-4 sm:flex-row">
+  <div className="relative w-full flex-1">
+    <input
+      type="text"
+      value={searchValue}
+      onChange={(event) => setSearchValue(event.target.value)}
+      placeholder="Search..."
+    />
+  </div>
+
+  <select
+    value={sortValue}
+    onChange={(event) => setSortValue(event.target.value)}
+  >
+    <option value="value">Sort - By Value</option>
+    <option value="price">Price (Sort)</option>
+    <option value="balance">Amount (Sort)</option>
+    <option value="change24h">24h Change</option>
+  </select>
+</section>
+
+<PortfolioAssetsTable rows={filteredRows} />
+```
+
+### Table Columns
+
+| Column | Description |
+|--------|-------------|
+| **Asset** | Name and symbol with icon |
+| **Balance** | Amount held (e.g., "0.5 BTC") |
+| **Price** | Current market price |
+| **Value** | Current value in USD |
+| **Change 24h** | 24-hour price change |
+| **Change 7d** | 7-day price change |
+| **Allocation** | Percentage of total portfolio |
+
+### Sorting and Filtering
+
+The table supports:
+
+- **Search**: Filter by asset name or symbol
+- **Sort Options**: Value, price, balance, or 24h change
+- **Real-time Updates**: Prices update automatically
+
+```javascript PortfolioPage.jsx:89-108
+const filteredRows = useMemo(() => {
+  const normalizedSearch = searchValue.trim().toLowerCase()
+
+  const matchingRows = normalizedSearch
+    ? baseRows.filter(
+        (row) => row.name.toLowerCase().includes(normalizedSearch) || 
+                 row.symbol.toLowerCase().includes(normalizedSearch),
+      )
+    : baseRows
+
+  const sorterByKey = {
+    value: (row) => row.currentValueUsd,
+    price: (row) => row.currentPrice,
+    balance: (row) => row.amount,
+    change24h: (row) => row.change24h,
+  }
+
+  const sortSelector = sorterByKey[sortValue] ?? sorterByKey.value
+  return [...matchingRows].sort((left, right) => sortSelector(right) - sortSelector(left))
+}, [baseRows, searchValue, sortValue])
+```
+
+## CSV Export
+
+Export your portfolio data for external analysis or record-keeping:
+
+```javascript PortfolioPage.jsx:149-164
+function handleExportPortfolio() {
+  const headers = [
+    { key: 'name', label: 'Asset' },
+    { key: 'symbol', label: 'Symbol' },
+    { key: 'amount', label: 'Amount' },
+    { key: 'currentPrice', label: 'Price (USD)' },
+    { key: 'currentValueUsd', label: 'Value (USD)' },
+    { key: 'investedUsd', label: 'Invested (USD)' },
+    { key: 'change24h', label: 'Change 24h (%)' },
+    { key: 'change7d', label: 'Change 7d (%)' },
+    { key: 'allocationPercent', label: 'Allocation (%)' },
+  ]
+  
+  exportToCSV(filteredRows, headers, 'portfolio')
+  success('Portfolio exported successfully')
+}
+```
+
+The exported CSV file includes:
+- All asset details
+- Current prices and values
+- Historical changes
+- Allocation percentages
+- Timestamp in filename (`portfolio_2026-03-05.csv`)
+
+<Tip>
+The CSV export respects your current search and sort filters, so you can export a filtered subset of your portfolio.
+</Tip>
+
+## Data Storage
+
+Portfolio data is stored in **localStorage** with the key `crypto_dash_portfolios`:
+
+```javascript
+{
+  "primary": {
+    "id": "primary",
+    "name": "Primary Portfolio",
+    "positions": [
+      {
+        "assetId": "bitcoin",
+        "amount": 0.5,
+        "investedUsd": 15000
+      }
+    ]
+  }
+}
+```
+
+<Warning>
+Portfolio data is stored locally in your browser. Clear your browser cache or localStorage will reset your portfolio.
+</Warning>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Portfolio Components" icon="puzzle-piece" href="/components/overview">
+    PortfolioAssetsTable and PortfolioPerformanceChart
+  </Card>
+  <Card title="Portfolio API" icon="code" href="/api/services/portfolio-api">
+    Portfolio management functions and data models
+  </Card>
+  <Card title="CSV Export" icon="download" href="/api/utils/csv-export">
+    Export utility for downloading portfolio data
+  </Card>
+  <Card title="Formatters" icon="hashtag" href="/api/utils/formatters">
+    Currency and percentage formatting utilities
+  </Card>
+</CardGroup>

@@ -1,0 +1,418 @@
+---
+title: Transactions
+description: Complete transaction history with filtering, search, and CSV export functionality
+---
+
+## Overview
+
+The Transactions feature provides a comprehensive view of all your cryptocurrency buy, sell, and transfer activities. Filter by type, status, asset, and date range, search by transaction ID or asset name, and export your transaction history to CSV.
+
+<Note>
+Currently, CryptoDash displays **mock transaction data** for demonstration purposes. In a production environment, these would be fetched from a backend API or blockchain.
+</Note>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Complete History" icon="list">
+    All buy, sell, and transfer transactions in one place
+  </Card>
+  <Card title="Advanced Filtering" icon="filter">
+    Filter by type, status, asset, and date range
+  </Card>
+  <Card title="Real-time Search" icon="magnifying-glass">
+    Search by transaction ID, asset name, or symbol
+  </Card>
+  <Card title="CSV Export" icon="download">
+    Export filtered transaction data for external analysis
+  </Card>
+</CardGroup>
+
+## Transaction Statistics
+
+Four KPI cards at the top display aggregate transaction metrics:
+
+### Total Transactions
+Total number of all transactions (buy + sell + transfer).
+
+### Total Volume
+Sum of all transaction amounts in USD.
+
+### Total Buys
+Number of buy transactions with trending indicator.
+
+### Total Sells
+Number of sell transactions with trending indicator.
+
+```jsx TransactionsPage.jsx:160-256
+<section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+  {/* Total Transactions Card */}
+  <div className="group rounded-xl border bg-white p-6">
+    <div className="mb-4 flex items-start justify-between">
+      <div className="rounded-lg bg-[#2bee79]/10 p-2">
+        <span className="material-symbols-outlined text-[#2bee79]">receipt_long</span>
+      </div>
+      <div className="flex items-center text-xs font-bold text-[#2bee79]">
+        <span className="material-symbols-outlined mr-1 text-xs">trending_up</span>
+        +12.5%
+      </div>
+    </div>
+    <p className="mb-1 text-xs font-bold uppercase">Total Transactions</p>
+    <div className="flex items-end justify-between">
+      <h3 className="text-2xl font-black">{TOTAL_TRANSACTIONS}</h3>
+      <div className="flex h-7.5 w-20 items-end gap-1 rounded">
+        {/* Mini bar chart */}
+      </div>
+    </div>
+  </div>
+
+  {/* Total Volume Card */}
+  <div className="group rounded-xl border bg-white p-6">
+    <p className="mb-1 text-xs font-bold uppercase">Total Volume</p>
+    <h3 className="text-2xl font-black">{formatCurrency(TOTAL_VOLUME)}</h3>
+  </div>
+
+  {/* Buys and Sells Cards */}
+</section>
+```
+
+The statistics are calculated from the transactions array:
+
+```javascript TransactionsPage.jsx:74-77
+const TOTAL_TRANSACTIONS = MOCK_TRANSACTIONS.length
+const BUY_COUNT = MOCK_TRANSACTIONS.filter((t) => t.type === 'buy').length
+const SELL_COUNT = MOCK_TRANSACTIONS.filter((t) => t.type === 'sell').length
+const TOTAL_VOLUME = MOCK_TRANSACTIONS.reduce((acc, t) => acc + t.totalUsd, 0)
+```
+
+## Filters and Search
+
+Multiple filter options and a search bar help you find specific transactions:
+
+### Search Bar
+
+Search by transaction ID, asset name, or symbol:
+
+```jsx TransactionsPage.jsx:261-273
+<div className="relative min-w-70 flex-1">
+  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2">
+    search
+  </span>
+  <input
+    type="text"
+    placeholder="Search transactions..."
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    className="w-full rounded-lg border-none bg-slate-50 py-2 pl-10 pr-4"
+  />
+</div>
+```
+
+### Type Filter
+
+Filter by transaction type:
+- **All**: Show all transactions
+- **Buy**: Show only buy transactions
+- **Sell**: Show only sell transactions
+
+```jsx TransactionsPage.jsx:275-289
+<select
+  value={filterType}
+  onChange={(e) => setFilterType(e.target.value)}
+>
+  <option value="all">All</option>
+  <option value="buy">Buy</option>
+  <option value="sell">Sell</option>
+</select>
+```
+
+### Status Filter
+
+Filter by transaction status:
+- **All**: Show all statuses
+- **Completed**: Confirmed transactions
+- **Pending**: Awaiting confirmation
+- **Failed**: Failed transactions
+
+### Asset Filter
+
+Filter transactions by specific cryptocurrency (BTC, ETH, SOL, etc.).
+
+### Filter Implementation
+
+```javascript TransactionsPage.jsx:90-101
+const filteredTransactions = MOCK_TRANSACTIONS.filter((tx) => {
+  const matchesSearch =
+    tx.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tx.asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tx.asset.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+
+  const matchesType = filterType === 'all' || tx.type === filterType
+  const matchesStatus = filterStatus === 'all' || tx.status === filterStatus
+  const matchesAsset = filterAsset === 'all' || tx.asset.symbol === filterAsset
+
+  return matchesSearch && matchesType && matchesStatus && matchesAsset
+})
+```
+
+## Transactions Table
+
+A comprehensive table displays all transaction details:
+
+### Columns
+
+| Column | Description | Example |
+|--------|-------------|----------|
+| **Transaction ID** | Unique identifier | TX-90245 |
+| **Date** | Timestamp of transaction | Feb 18, 2026, 14:30 |
+| **Asset** | Cryptocurrency name and symbol | Bitcoin (BTC) |
+| **Type** | Buy or Sell badge | 🟢 BUY / 🔴 SELL |
+| **Amount** | Quantity of crypto | 0.12 BTC |
+| **Price** | Unit price in USD | $34,240.50 |
+| **Fee** | Transaction fee | $12.33 |
+| **Total** | Total amount (price × amount ± fee) | $4,108.86 |
+| **Hash** | Blockchain transaction hash (truncated) | 0x7f3b8c...2b4c8d |
+| **Status** | Completed, Pending, or Failed | ✅ Completed |
+| **Actions** | View details button | 👁️ |
+
+### Row Implementation
+
+```jsx TransactionsPage.jsx:356-452
+{filteredTransactions.map((tx) => (
+  <tr
+    key={tx.id}
+    onClick={() => setSelectedTransaction(tx)}
+    className="group cursor-pointer hover:bg-slate-50"
+  >
+    <td className="px-6 py-4 font-mono text-xs text-[#2bee79]">{tx.id}</td>
+    <td className="px-6 py-4 text-sm">
+      {new Date(tx.date).toLocaleString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-3">
+        <div className={`flex size-8 items-center justify-center rounded-full bg-${tx.asset.color}-500/20`}>
+          <span className={`material-symbols-outlined text-${tx.asset.color}-500`}>
+            {tx.asset.icon}
+          </span>
+        </div>
+        <div>
+          <p className="text-sm font-bold">{tx.asset.name}</p>
+          <p className="text-[10px] font-bold uppercase">{tx.asset.symbol}</p>
+        </div>
+      </div>
+    </td>
+    <td className="px-6 py-4 text-center">
+      {tx.type === 'buy' ? (
+        <span className="inline-flex rounded-full border border-[#2bee79]/30 bg-[#2bee79]/20 px-2.5 py-1 text-[10px] font-black uppercase text-[#2bee79]">
+          BUY
+        </span>
+      ) : (
+        <span className="inline-flex rounded-full border border-red-500/30 bg-red-500/20 px-2.5 py-1 text-[10px] font-black uppercase text-red-500">
+          SELL
+        </span>
+      )}
+    </td>
+    <td className="px-6 py-4 text-sm font-medium">
+      {tx.amount} {tx.asset.symbol}
+    </td>
+    <td className="px-6 py-4 text-sm">{formatCurrency(tx.priceUsd)}</td>
+    <td className="px-6 py-4 text-sm">{formatCurrency(tx.feeUsd)}</td>
+    <td className={`px-6 py-4 text-sm font-bold ${
+      tx.type === 'buy' ? 'text-[#2bee79]' : 'text-red-500'
+    }`}>
+      {formatCurrency(tx.totalUsd)}
+    </td>
+    <td className="px-6 py-4">
+      <div className="group/hash relative flex items-center gap-2">
+        <span className="font-mono text-xs">
+          {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
+        </span>
+        <button onClick={(e) => {
+          e.stopPropagation()
+          navigator.clipboard.writeText(tx.hash)
+        }}>
+          <span className="material-symbols-outlined text-sm">content_copy</span>
+        </button>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      {tx.status === 'completed' && (
+        <div className="flex items-center gap-1.5 text-[#2bee79]">
+          <div className="size-1.5 animate-pulse rounded-full bg-[#2bee79]"></div>
+          <span className="text-xs font-bold">Completed</span>
+        </div>
+      )}
+      {tx.status === 'pending' && (
+        <div className="flex items-center gap-1.5 text-yellow-500">
+          <div className="size-1.5 rounded-full bg-yellow-500"></div>
+          <span className="text-xs font-bold">Pending</span>
+        </div>
+      )}
+      {tx.status === 'failed' && (
+        <div className="flex items-center gap-1.5 text-red-500">
+          <div className="size-1.5 rounded-full bg-red-500"></div>
+          <span className="text-xs font-bold">Failed</span>
+        </div>
+      )}
+    </td>
+    <td className="px-6 py-4">
+      <button className="transition-colors hover:text-[#2bee79]">
+        <span className="material-symbols-outlined">visibility</span>
+      </button>
+    </td>
+  </tr>
+))}
+```
+
+<Tip>
+Click any row to open the Transaction Detail Modal with complete information about that transaction.
+</Tip>
+
+## Transaction Detail Modal
+
+Clicking a transaction row opens a modal with full transaction details:
+
+```jsx TransactionsPage.jsx:496-499
+{selectedTransaction && (
+  <TransactionDetailModal 
+    transaction={selectedTransaction} 
+    onClose={() => setSelectedTransaction(null)} 
+  />
+)}
+```
+
+The modal displays:
+- Complete transaction information
+- Full blockchain hash (with copy button)
+- Timestamp with timezone
+- Asset icon and details
+- Fee breakdown
+- Status with icon
+
+## CSV Export
+
+Export your transaction history for external analysis:
+
+```jsx TransactionsPage.jsx:148-155
+<button 
+  onClick={handleExportTransactions}
+  disabled={!filteredTransactions.length}
+  className="flex items-center gap-2 rounded-lg border px-5 py-2"
+>
+  <span className="material-symbols-outlined text-sm">download</span>
+  Export CSV
+</button>
+```
+
+### Export Implementation
+
+```javascript TransactionsPage.jsx:103-132
+function handleExportTransactions() {
+  const headers = [
+    { key: 'id', label: 'Transaction ID' },
+    { key: 'date', label: 'Date' },
+    { key: 'assetName', label: 'Asset' },
+    { key: 'assetSymbol', label: 'Symbol' },
+    { key: 'type', label: 'Type' },
+    { key: 'amount', label: 'Amount' },
+    { key: 'priceUsd', label: 'Price (USD)' },
+    { key: 'totalUsd', label: 'Total (USD)' },
+    { key: 'feeUsd', label: 'Fee (USD)' },
+    { key: 'status', label: 'Status' },
+  ]
+
+  const dataToExport = filteredTransactions.map((tx) => ({
+    id: tx.id,
+    date: new Date(tx.date).toLocaleString(),
+    assetName: tx.asset.name,
+    assetSymbol: tx.asset.symbol,
+    type: tx.type.toUpperCase(),
+    amount: tx.amount,
+    priceUsd: tx.priceUsd,
+    totalUsd: tx.totalUsd,
+    feeUsd: tx.feeUsd,
+    status: tx.status,
+  }))
+
+  exportToCSV(dataToExport, headers, 'transactions')
+  success('Transactions exported successfully')
+}
+```
+
+The CSV file includes:
+- All transaction fields
+- Formatted dates
+- Uppercase type labels
+- Timestamp in filename (`transactions_2026-03-05.csv`)
+
+<Info>
+The CSV export respects your active filters, so you can export only the transactions you're currently viewing.
+</Info>
+
+## Pagination
+
+The table includes pagination controls:
+
+```jsx TransactionsPage.jsx:465-492
+<div className="flex items-center justify-between border-t bg-slate-50 px-6 py-4">
+  <p className="text-sm">Showing <span className="font-bold">1 - 5</span> of <span className="font-bold">{TOTAL_TRANSACTIONS}</span> transactions</p>
+  <div className="flex items-center gap-2">
+    <button disabled className="rounded-md border px-3 py-1 text-sm">Previous</button>
+    <button className="rounded-md bg-[#2bee79] px-3 py-1 text-sm font-bold">1</button>
+    <button className="rounded-md border px-3 py-1 text-sm">2</button>
+    <button className="rounded-md border px-3 py-1 text-sm">3</button>
+    <span>...</span>
+    <button className="rounded-md border px-3 py-1 text-sm">26</button>
+    <button className="rounded-md border px-3 py-1 text-sm">Next</button>
+  </div>
+</div>
+```
+
+<Note>
+Pagination controls are currently static. In a production environment, they would be connected to API pagination parameters.
+</Note>
+
+## Mock Transaction Data
+
+The transactions page uses mock data for demonstration:
+
+```javascript TransactionsPage.jsx:11-72
+const MOCK_TRANSACTIONS = [
+  {
+    id: 'TX-90245',
+    date: '2026-02-18T14:30:00',
+    asset: { name: 'Bitcoin', symbol: 'BTC', icon: 'currency_bitcoin', color: 'orange' },
+    type: 'buy',
+    amount: 0.12,
+    priceUsd: 34240.5,
+    totalUsd: 4108.86,
+    feeUsd: 12.33,
+    status: 'completed',
+    hash: '0x7f3b8c2a9e1d4f6b8a2c5e9f1a3b7c4d9e2f5a8b1c6d3e7f9a2b4c8d1e5f7a9b',
+  },
+  // ... more transactions
+]
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Transaction Components" icon="puzzle-piece" href="/components/overview">
+    TransactionDetailModal component
+  </Card>
+  <Card title="CSV Export" icon="download" href="/api/utils/csv-export">
+    Export utility for transaction data
+  </Card>
+  <Card title="Formatters" icon="hashtag" href="/api/utils/formatters">
+    Currency formatting utilities
+  </Card>
+  <Card title="Toast Context" icon="bell" href="/api/context/toast-context">
+    Success/error notifications
+  </Card>
+</CardGroup>

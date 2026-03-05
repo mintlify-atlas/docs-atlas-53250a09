@@ -1,0 +1,612 @@
+---
+title: 'Theming System'
+description: 'Learn about the dark/light theme implementation using Tailwind CSS and Context API'
+---
+
+## Overview
+
+CryptoDash features a comprehensive theming system with:
+
+- **Dark theme** (default) - Green-tinted dark mode
+- **Light theme** - Clean light mode
+- **Automatic persistence** via localStorage
+- **Tailwind CSS** for styling
+- **CSS variables** for dynamic theming
+
+The theme system is managed through React Context and synchronized with the DOM for Tailwind's `dark:` variant.
+
+## Tailwind Configuration
+
+The theme is configured in `tailwind.config.js`:
+
+```javascript tailwind.config.js
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: 'class',  // Use class-based dark mode
+  theme: {
+    extend: {
+      colors: {
+        // Dark theme colors (green-tinted)
+        dark: {
+          bg: {
+            primary: '#0B1F14',
+            secondary: '#102217',
+            tertiary: '#152A1E',
+            card: '#1a2e24',
+          },
+          text: {
+            primary: '#f1f5f9',
+            secondary: '#cbd5e1',
+            tertiary: '#94a3b8',
+          },
+          accent: '#2bee79',
+        },
+        
+        // Light theme colors
+        light: {
+          bg: {
+            primary: '#ffffff',
+            secondary: '#f8fafc',
+            tertiary: '#f1f5f9',
+            card: '#ffffff',
+          },
+          text: {
+            primary: '#0f172a',
+            secondary: '#475569',
+            tertiary: '#64748b',
+          },
+          accent: '#10b981',
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+<Info>
+  `darkMode: 'class'` enables dark mode when the `dark` class is present on the HTML element.
+</Info>
+
+## CSS Variables
+
+Global CSS variables are defined in `src/index.css`:
+
+<Tabs>
+  <Tab title="Light Theme (Default)">
+    ```css src/index.css
+    /* Light theme variables (default) */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --bg-card: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-tertiary: #64748b;
+      --accent: #10b981;
+      --border: #e2e8f0;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Dark Theme">
+    ```css src/index.css
+    /* Dark theme variables (green theme) */
+    html.dark {
+      --bg-primary: #0B1F14;
+      --bg-secondary: #102217;
+      --bg-tertiary: #152A1E;
+      --bg-card: #1a2e24;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-tertiary: #94a3b8;
+      --accent: #2bee79;
+      --border: #1a2e23;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  CSS variables provide a fallback for components that don't use Tailwind classes.
+</Note>
+
+## Theme Context
+
+Theme state is managed through `SettingsContext`:
+
+```jsx src/contexts/SettingsContext.jsx
+import { createContext, useContext, useState, useEffect } from 'react'
+
+const SettingsContext = createContext()
+
+export function SettingsProvider({ children }) {
+  // Initialize from localStorage or default to 'dark'
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('crypto-dash-theme')
+    return saved || 'dark'
+  })
+
+  // Apply theme on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('crypto-dash-theme') || 'dark'
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [])
+
+  // Sync theme changes to DOM and localStorage
+  useEffect(() => {
+    localStorage.setItem('crypto-dash-theme', theme)
+    
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  }
+
+  const value = {
+    theme,
+    setTheme,
+    toggleTheme,
+    // ... language settings
+  }
+
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  )
+}
+
+export function useSettings() {
+  const context = useContext(SettingsContext)
+  if (!context) {
+    throw new Error('useSettings must be used within SettingsProvider')
+  }
+  return context
+}
+```
+
+## Using Themes in Components
+
+### Method 1: Tailwind's `dark:` Variant (Recommended)
+
+The most common and recommended approach:
+
+```jsx
+function Card() {
+  return (
+    <div className="bg-white dark:bg-dark-bg-card text-slate-900 dark:text-slate-100">
+      <h2 className="text-light-text-primary dark:text-dark-text-primary">
+        Card Title
+      </h2>
+    </div>
+  )
+}
+```
+
+<Steps>
+  <Step title="Default (Light) Style">
+    `bg-white text-slate-900` - Applied when no `dark` class exists
+  </Step>
+  
+  <Step title="Dark Style">
+    `dark:bg-dark-bg-card dark:text-slate-100` - Applied when `dark` class is present on `<html>`
+  </Step>
+</Steps>
+
+### Method 2: CSS Variables
+
+Useful for dynamic styles:
+
+```jsx
+function CustomComponent() {
+  return (
+    <div style={{
+      backgroundColor: 'var(--bg-card)',
+      color: 'var(--text-primary)',
+      borderColor: 'var(--border)'
+    }}>
+      Content
+    </div>
+  )
+}
+```
+
+### Method 3: Conditional Classes
+
+For complex logic:
+
+```jsx
+import { useSettings } from '../contexts/SettingsContext'
+
+function ConditionalComponent() {
+  const { theme } = useSettings()
+  
+  return (
+    <div className={theme === 'dark' ? 'bg-dark-bg-card' : 'bg-light-bg-card'}>
+      Content
+    </div>
+  )
+}
+```
+
+## Theme Toggle Implementation
+
+Implement a theme toggle button:
+
+<CodeGroup>
+
+```jsx Simple Toggle
+import { useSettings } from '../contexts/SettingsContext'
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useSettings()
+  
+  return (
+    <button 
+      onClick={toggleTheme}
+      className="p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+    >
+      {theme === 'dark' ? '☀️' : '🌙'}
+    </button>
+  )
+}
+```
+
+```jsx Icon Toggle
+import { useSettings } from '../contexts/SettingsContext'
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useSettings()
+  
+  return (
+    <button 
+      onClick={toggleTheme}
+      className="p-2 rounded transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+      aria-label="Toggle theme"
+    >
+      <span className="material-symbols-outlined">
+        {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+      </span>
+    </button>
+  )
+}
+```
+
+</CodeGroup>
+
+## Color Palette
+
+### Dark Theme (Green-Tinted)
+
+<CardGroup cols={2}>
+  <Card title="Backgrounds">
+    - **Primary**: `#0B1F14` - Main background
+    - **Secondary**: `#102217` - Slightly lighter
+    - **Tertiary**: `#152A1E` - Even lighter
+    - **Card**: `#1a2e24` - Card backgrounds
+  </Card>
+  
+  <Card title="Text">
+    - **Primary**: `#f1f5f9` - Main text
+    - **Secondary**: `#cbd5e1` - Muted text
+    - **Tertiary**: `#94a3b8` - Very muted
+  </Card>
+  
+  <Card title="Accent">
+    - **Accent**: `#2bee79` - Bright green for actions and highlights
+  </Card>
+  
+  <Card title="Border">
+    - **Border**: `#1a2e23` - Subtle borders
+  </Card>
+</CardGroup>
+
+### Light Theme
+
+<CardGroup cols={2}>
+  <Card title="Backgrounds">
+    - **Primary**: `#ffffff` - White
+    - **Secondary**: `#f8fafc` - Very light gray
+    - **Tertiary**: `#f1f5f9` - Light gray
+    - **Card**: `#ffffff` - White cards
+  </Card>
+  
+  <Card title="Text">
+    - **Primary**: `#0f172a` - Dark text
+    - **Secondary**: `#475569` - Medium gray
+    - **Tertiary**: `#64748b` - Light gray
+  </Card>
+  
+  <Card title="Accent">
+    - **Accent**: `#10b981` - Green for actions
+  </Card>
+  
+  <Card title="Border">
+    - **Border**: `#e2e8f0` - Light borders
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Layout Components
+
+```jsx src/layouts/DashboardLayout.jsx
+export default function DashboardLayout() {
+  return (
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#102217] dark:text-slate-100">
+      {/* Layout content */}
+    </div>
+  )
+}
+```
+
+### Cards
+
+```jsx
+function Card({ children }) {
+  return (
+    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-dark-bg-card">
+      {children}
+    </div>
+  )
+}
+```
+
+### Buttons
+
+```jsx
+function Button({ children, variant = 'primary' }) {
+  const baseClasses = "px-4 py-2 rounded-lg font-medium transition-colors"
+  
+  const variants = {
+    primary: "bg-light-accent text-white hover:bg-emerald-600 dark:bg-dark-accent dark:text-black dark:hover:bg-emerald-400",
+    secondary: "bg-slate-200 text-slate-900 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
+  }
+  
+  return (
+    <button className={`${baseClasses} ${variants[variant]}`}>
+      {children}
+    </button>
+  )
+}
+```
+
+### Text Elements
+
+```jsx
+function Typography() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary">
+        Heading
+      </h1>
+      
+      <p className="text-light-text-secondary dark:text-dark-text-secondary">
+        Paragraph text
+      </p>
+      
+      <small className="text-light-text-tertiary dark:text-dark-text-tertiary">
+        Small text
+      </small>
+    </div>
+  )
+}
+```
+
+## Custom Styling
+
+### Scrollbars
+
+Custom scrollbar styles for dark theme:
+
+```css src/index.css
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #28392f;
+  border-radius: 10px;
+}
+```
+
+Usage:
+
+```jsx
+<div className="overflow-y-auto custom-scrollbar">
+  {/* Scrollable content */}
+</div>
+```
+
+### SVG Filters
+
+Add glow effects for charts:
+
+```css src/index.css
+.sparkline-svg {
+  filter: drop-shadow(0 0 4px rgba(43, 238, 121, 0.3));
+}
+```
+
+## Theme Persistence
+
+The theme automatically persists across sessions:
+
+<Steps>
+  <Step title="On Mount">
+    Read theme from localStorage (`crypto-dash-theme`)
+  </Step>
+  
+  <Step title="On Change">
+    Save new theme to localStorage and update DOM
+  </Step>
+  
+  <Step title="On Next Visit">
+    Restore saved theme preference
+  </Step>
+</Steps>
+
+```javascript
+// Storage key
+const THEME_KEY = 'crypto-dash-theme'
+
+// Read
+const savedTheme = localStorage.getItem(THEME_KEY) || 'dark'
+
+// Write
+localStorage.setItem(THEME_KEY, theme)
+```
+
+## Accessibility
+
+<AccordionGroup>
+  <Accordion title="Color Contrast">
+    Both themes meet WCAG AA standards:
+    
+    - Dark theme: Light text on dark backgrounds
+    - Light theme: Dark text on light backgrounds
+    - Accent colors have sufficient contrast
+  </Accordion>
+  
+  <Accordion title="Reduced Motion">
+    Respect user preferences for reduced motion:
+    
+    ```css
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Focus Indicators">
+    Add visible focus states:
+    
+    ```jsx
+    <button className="focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent">
+      Button
+    </button>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Semantic Color Names">
+    Instead of hardcoding colors, use theme tokens:
+    
+    ```jsx
+    // Good
+    <div className="bg-light-bg-card dark:bg-dark-bg-card">
+    
+    // Bad
+    <div className="bg-white dark:bg-[#1a2e24]">
+    ```
+  </Accordion>
+  
+  <Accordion title="Test Both Themes">
+    Always test components in both light and dark modes to ensure proper contrast and visibility.
+  </Accordion>
+  
+  <Accordion title="Avoid Hardcoded Colors">
+    Use Tailwind classes or CSS variables instead of inline styles:
+    
+    ```jsx
+    // Good
+    <div className="text-light-text-primary dark:text-dark-text-primary">
+    
+    // Avoid
+    <div style={{ color: theme === 'dark' ? '#f1f5f9' : '#0f172a' }}>
+    ```
+  </Accordion>
+  
+  <Accordion title="Provide Smooth Transitions">
+    Add transitions for theme changes:
+    
+    ```jsx
+    <div className="transition-colors duration-200 bg-white dark:bg-dark-bg-card">
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Extending the Theme
+
+To add new colors:
+
+<Steps>
+  <Step title="Update Tailwind Config">
+    ```javascript tailwind.config.js
+    theme: {
+      extend: {
+        colors: {
+          dark: {
+            // ... existing colors
+            success: '#22c55e',
+            danger: '#ef4444',
+          },
+          light: {
+            // ... existing colors
+            success: '#16a34a',
+            danger: '#dc2626',
+          },
+        },
+      },
+    }
+    ```
+  </Step>
+  
+  <Step title="Update CSS Variables (Optional)">
+    ```css src/index.css
+    :root {
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+    
+    html.dark {
+      --success: #22c55e;
+      --danger: #ef4444;
+    }
+    ```
+  </Step>
+  
+  <Step title="Use in Components">
+    ```jsx
+    <button className="bg-light-success dark:bg-dark-success">
+      Success Button
+    </button>
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Learn where theme files are located
+  </Card>
+  
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Understand the SettingsContext implementation
+  </Card>
+</CardGroup>

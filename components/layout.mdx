@@ -1,0 +1,370 @@
+---
+title: Layout Components
+description: Sidebar and TopBar components that form the application structure
+---
+
+## Overview
+
+Layout components provide the structural foundation for CryptoDash. They handle navigation, branding, responsive behavior, and global controls like theme switching.
+
+## Sidebar
+
+The main navigation sidebar with responsive mobile drawer behavior.
+
+### Props
+
+<ParamField path="isOpen" type="boolean" required>
+  Controls sidebar visibility. On mobile, this toggles the drawer open/closed. On desktop (md+), the sidebar is always visible.
+</ParamField>
+
+<ParamField path="onClose" type="function" required>
+  Callback function invoked when the sidebar should close. Called when:
+  - User clicks the close button
+  - User clicks the overlay backdrop
+  - User presses the Escape key
+  - User navigates to a new page
+</ParamField>
+
+### Features
+
+**Responsive Behavior**
+- Mobile: Slide-out drawer with backdrop overlay
+- Desktop: Fixed sidebar, always visible
+- Smooth transitions with `duration-300`
+
+**Keyboard Navigation**
+- Escape key closes the mobile menu
+- Body scroll locked when mobile menu is open
+
+**Navigation Items**
+- Uses `NavLink` from React Router for active state
+- Active links have bright green background (`#2bee79`)
+- Hover states with smooth transitions
+- Material icons with scale animation on hover
+
+**Branding Section**
+- App logo with "CryptoDash" title
+- "Pro Terminal" subtitle
+
+**Promotional Card**
+- Fixed at bottom of sidebar
+- Pro plan upgrade prompt with i18n support
+
+### Usage Example
+
+```jsx
+import { useState } from 'react'
+import Sidebar from './components/layout/Sidebar'
+
+function Layout() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)} 
+      />
+      {/* Main content */}
+    </div>
+  )
+}
+```
+
+### Navigation Configuration
+
+Navigation items are defined in `/src/constants/navigation.js`:
+
+```javascript
+export const navItems = [
+  { key: 'dashboard', path: '/', icon: 'dashboard' },
+  { key: 'market', path: '/market', icon: 'trending_up' },
+  { key: 'portfolio', path: '/portfolio', icon: 'account_balance_wallet' },
+  // ... more items
+]
+```
+
+Labels are translated using `useTranslations()` hook:
+
+```jsx
+const t = useTranslations()
+// Access with: t.nav[item.key]
+```
+
+### Styling Highlights
+
+**Active Navigation Item**
+```css
+bg-[#2bee79]              /* Bright green background */
+font-bold                  /* Bold text */
+text-slate-900            /* Dark text */
+shadow-lg shadow-[#2bee79]/20  /* Glowing shadow */
+```
+
+**Inactive Navigation Item**
+```css
+text-slate-600 dark:text-slate-400     /* Muted text */
+hover:bg-slate-100 dark:hover:bg-[#1a2e23]  /* Hover background */
+hover:text-slate-900 dark:hover:text-[#2bee79]  /* Hover text */
+```
+
+### Accessibility
+
+- Close button includes `aria-label="Close menu"`
+- Overlay has `aria-hidden="true"`
+- Keyboard navigation fully supported
+- Focus management on open/close
+
+---
+
+## TopBar
+
+The application header displaying market stats, user controls, and mobile menu trigger.
+
+### Props
+
+<ParamField path="marketCapValue" type="string" required>
+  Formatted total market capitalization (e.g., "$2.4T")
+</ParamField>
+
+<ParamField path="marketCapChange" type="string" required>
+  24-hour market cap change percentage (e.g., "+2.4%")
+</ParamField>
+
+<ParamField path="marketCapPositive" type="boolean" required>
+  Whether market cap change is positive. Controls color: green for true, red for false.
+</ParamField>
+
+<ParamField path="volumeValue" type="string" required>
+  Formatted 24-hour trading volume (e.g., "$86.7B")
+</ParamField>
+
+<ParamField path="onMenuClick" type="function" required>
+  Callback invoked when hamburger menu button is clicked (mobile only)
+</ParamField>
+
+### Features
+
+**Market Statistics Display**
+- Real-time market cap with 24h change indicator
+- 24h trading volume (hidden on very small screens)
+- Color-coded trend indicators (green/red arrows)
+- Responsive text sizing
+
+**User Controls**
+- Theme toggle (light/dark mode)
+- Language selector (EN/ES)
+- User profile display with avatar
+
+**Mobile Menu Button**
+- Only visible on mobile (`md:hidden`)
+- Opens sidebar drawer
+- Material hamburger icon
+
+### Usage Example
+
+```jsx
+import TopBar from './components/layout/TopBar'
+import { useDashboardData } from './hooks/useDashboardData'
+
+function DashboardLayout() {
+  const dashboardData = useDashboardData()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  return (
+    <main className="flex flex-col">
+      <TopBar
+        marketCapValue={dashboardData.marketCapValue}
+        marketCapChange={dashboardData.marketCapChange}
+        marketCapPositive={dashboardData.marketCapPositive}
+        volumeValue={dashboardData.volumeValue}
+        onMenuClick={() => setIsMobileMenuOpen(true)}
+      />
+      {/* Page content */}
+    </main>
+  )
+}
+```
+
+### Context Integration
+
+TopBar uses `SettingsContext` for theme and language controls:
+
+```jsx
+import { useSettings } from '../../contexts/SettingsContext'
+
+const { language, toggleLanguage, theme, toggleTheme } = useSettings()
+```
+
+**Theme Toggle**
+```jsx
+<button onClick={toggleTheme}>
+  <span className="material-symbols-outlined">
+    {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+  </span>
+</button>
+```
+
+**Language Toggle**
+```jsx
+<button onClick={toggleLanguage}>
+  <span className="material-symbols-outlined">language</span>
+  <span className="text-xs font-bold uppercase">
+    {language === 'en' ? 'EN' : 'ES'}
+  </span>
+</button>
+```
+
+### Responsive Design
+
+**Hamburger Menu**
+- Visible: `< 768px` (mobile)
+- Hidden: `≥ 768px` (desktop)
+
+**Market Stats**
+- Mobile: Market cap only, minimal labels
+- Small: Market cap with change, volume hidden
+- Desktop: Full stats with labels
+
+**User Profile**
+- Name/title hidden on small screens
+- Avatar always visible
+
+### Styling Details
+
+**Header Container**
+```css
+h-16                      /* Fixed height */
+bg-white/80 backdrop-blur-md   /* Frosted glass effect */
+dark:bg-[#102217]/50      /* Semi-transparent dark */
+border-b border-slate-200 /* Bottom border */
+```
+
+**Stat Colors**
+```css
+/* Positive change */
+text-emerald-600 dark:text-[#2bee79]
+
+/* Negative change */
+text-red-500
+```
+
+### Internationalization
+
+All text uses the `useTranslations()` hook:
+
+```jsx
+const t = useTranslations()
+
+<span>{t.topBar.marketCap}:</span>
+<span>{t.topBar.volume24h}:</span>
+```
+
+### Accessibility
+
+- Hamburger button includes `aria-label="Open menu"`
+- Theme toggle has dynamic title based on current theme
+- Language toggle has dynamic title
+- Semantic `<header>` element
+
+---
+
+## DashboardLayout
+
+Wrapper component that combines Sidebar, TopBar, and ToastContainer.
+
+### Implementation
+
+```jsx
+import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import Sidebar from '../components/layout/Sidebar'
+import TopBar from '../components/layout/TopBar'
+import ToastContainer from '../components/common/ToastContainer'
+import { useDashboardData } from '../hooks/useDashboardData'
+
+export default function DashboardLayout() {
+  const dashboardData = useDashboardData()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)} 
+      />
+
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <TopBar
+          marketCapValue={dashboardData.marketCapValue}
+          marketCapChange={dashboardData.marketCapChange}
+          marketCapPositive={dashboardData.marketCapPositive}
+          volumeValue={dashboardData.volumeValue}
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+        />
+
+        <Outlet context={dashboardData} />
+      </main>
+
+      <ToastContainer />
+    </div>
+  )
+}
+```
+
+### Data Flow
+
+1. `useDashboardData()` fetches market data
+2. Data passed to TopBar for display
+3. Full dashboard data passed to child routes via `<Outlet context={...}>`
+4. Child pages access data with `useOutletContext()`
+
+**In child pages:**
+```jsx
+import { useOutletContext } from 'react-router-dom'
+
+export default function DashboardPage() {
+  const { loading, summaryCards, marketRows } = useOutletContext()
+  // Use the data
+}
+```
+
+### Mobile Menu State Management
+
+```jsx
+const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+// Open from TopBar hamburger
+onMenuClick={() => setIsMobileMenuOpen(true)}
+
+// Close from Sidebar
+onClose={() => setIsMobileMenuOpen(false)}
+```
+
+## Best Practices
+
+### Layout Component Usage
+
+1. **Always use DashboardLayout** as the parent route wrapper
+2. **Pass formatted data** to TopBar, not raw values
+3. **Handle mobile menu state** at the layout level
+4. **Use Outlet context** to share data with child routes
+
+### Responsive Considerations
+
+1. Test mobile menu at `< 768px`
+2. Verify sidebar visibility at `≥ 768px`
+3. Check stat visibility at different breakpoints
+4. Ensure touch targets are `≥ 44px`
+
+### Performance
+
+1. Sidebar uses CSS transforms for smooth animations
+2. Backdrop blur is GPU-accelerated
+3. Mobile menu locks body scroll to prevent double scrolling
+4. Event listeners cleaned up on unmount
+
+## Related Documentation
+
+- [Common Components](/components/common) - ToastContainer and other utilities
+- [Component Overview](/components/overview) - Architecture patterns

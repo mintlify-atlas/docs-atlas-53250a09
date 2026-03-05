@@ -1,0 +1,178 @@
+---
+title: 'SettingsContext'
+description: 'React context for managing application settings like theme and language preferences'
+---
+
+## Overview
+
+The `SettingsContext` provides a centralized way to manage user settings across your CryptoDash application. It handles theme (dark/light mode) and language (English/Spanish) preferences with automatic persistence to localStorage.
+
+## Components
+
+### SettingsProvider
+
+The context provider component that wraps your application to provide settings state and actions.
+
+<ParamField path="children" type="React.ReactNode" required>
+  The child components that will have access to the settings context
+</ParamField>
+
+#### Example: App Setup
+
+```jsx
+import { SettingsProvider } from './contexts/SettingsContext'
+import App from './App'
+
+function Root() {
+  return (
+    <SettingsProvider>
+      <App />
+    </SettingsProvider>
+  )
+}
+```
+
+## Hook API
+
+### useSettings
+
+A custom hook that provides access to settings state and actions. Must be used within a `SettingsProvider`.
+
+**Returns:** Settings context object with the following properties:
+
+<ParamField path="theme" type="'dark' | 'light'">
+  Current theme setting. Defaults to 'dark'
+</ParamField>
+
+<ParamField path="setTheme" type="(theme: 'dark' | 'light') => void">
+  Function to directly set the theme
+</ParamField>
+
+<ParamField path="toggleTheme" type="() => void">
+  Function to toggle between dark and light themes
+</ParamField>
+
+<ParamField path="language" type="'en' | 'es'">
+  Current language setting. Defaults to 'en' (English)
+</ParamField>
+
+<ParamField path="setLanguage" type="(language: 'en' | 'es') => void">
+  Function to directly set the language
+</ParamField>
+
+<ParamField path="toggleLanguage" type="() => void">
+  Function to toggle between English and Spanish
+</ParamField>
+
+## Usage Examples
+
+### Basic Usage
+
+```jsx
+import { useSettings } from '../contexts/SettingsContext'
+
+function MyComponent() {
+  const { theme, language } = useSettings()
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <p>Current language: {language}</p>
+    </div>
+  )
+}
+```
+
+### Theme Toggle
+
+```jsx
+import { useSettings } from '../contexts/SettingsContext'
+import { useToast } from '../contexts/ToastContext'
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useSettings()
+  const { success } = useToast()
+  
+  const handleThemeToggle = () => {
+    toggleTheme()
+    success('Theme changed successfully')
+  }
+  
+  return (
+    <button onClick={handleThemeToggle}>
+      {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+    </button>
+  )
+}
+```
+
+### Language Selector
+
+```jsx
+import { useSettings } from '../contexts/SettingsContext'
+
+function LanguageSelector() {
+  const { language, toggleLanguage } = useSettings()
+  
+  return (
+    <button onClick={toggleLanguage}>
+      Current: {language === 'en' ? 'English' : 'Español'}
+    </button>
+  )
+}
+```
+
+### Direct Theme Setting
+
+```jsx
+import { useSettings } from '../contexts/SettingsContext'
+
+function ThemeButtons() {
+  const { setTheme } = useSettings()
+  
+  return (
+    <div>
+      <button onClick={() => setTheme('light')}>Light Mode</button>
+      <button onClick={() => setTheme('dark')}>Dark Mode</button>
+    </div>
+  )
+}
+```
+
+## Features
+
+### Automatic Persistence
+
+Settings are automatically persisted to localStorage:
+- Theme: stored in `crypto-dash-theme`
+- Language: stored in `crypto-dash-language`
+
+Settings are restored on page reload.
+
+### Dark Mode Class Management
+
+The provider automatically manages the `dark` class on the document element:
+- Applies `dark` class when theme is 'dark'
+- Removes `dark` class when theme is 'light'
+
+This integrates seamlessly with Tailwind's dark mode utilities.
+
+### Error Handling
+
+The hook throws an error if used outside of a `SettingsProvider`:
+
+```
+Error: useSettings must be used within SettingsProvider
+```
+
+## Implementation Details
+
+The context uses React hooks internally:
+- `useState` with lazy initialization from localStorage
+- `useEffect` to sync changes to localStorage and DOM
+- Initial theme is applied on mount to prevent flash of wrong theme
+
+## Related
+
+- [useTranslations Hook](/api/hooks/use-translations) - Consumes the language setting
+- [ToastContext](/api/context/toast-context) - Often used together for user feedback

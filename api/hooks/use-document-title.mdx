@@ -1,0 +1,290 @@
+---
+title: 'useDocumentTitle'
+description: 'Custom React hook for dynamically updating the browser document title and meta description'
+---
+
+## Overview
+
+The `useDocumentTitle` hook manages the browser's document title and meta description tag. It automatically updates these values when the component mounts and restores the previous values when the component unmounts. This hook is essential for proper SEO and browser tab management.
+
+## Import
+
+```javascript
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+```
+
+## Signature
+
+```javascript
+function useDocumentTitle(
+  title: string,
+  description?: string
+): void
+```
+
+## Parameters
+
+<ParamField path="title" type="string" required>
+  The page title to display. Will be automatically appended with " | CryptoDash".
+  
+  If empty or undefined, the document title will be set to just "CryptoDash".
+</ParamField>
+
+<ParamField path="description" type="string">
+  Optional meta description for the page. Updates the `<meta name="description">` tag content.
+  
+  If provided, the previous meta description is saved and restored on unmount.
+</ParamField>
+
+## Return Value
+
+This hook returns nothing (`void`). It performs side effects on the DOM.
+
+## Behavior
+
+### Title Formatting
+
+- **With title**: Sets `document.title` to `"{title} | CryptoDash"`
+- **Without title**: Sets `document.title` to `"CryptoDash"`
+
+### Cleanup
+
+The hook automatically restores the previous document title and meta description when:
+- The component unmounts
+- The title or description parameters change
+
+## Usage Examples
+
+### Basic Page Title
+
+```javascript DashboardPage.jsx:7-12
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useTranslations } from '../hooks/useTranslations'
+
+export default function DashboardPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.dashboard, t.pageDescriptions.dashboard)
+  
+  return (
+    <div>
+      {/* Page content */}
+    </div>
+  )
+}
+```
+
+Result: Browser tab shows "Dashboard | CryptoDash"
+
+### All Page Examples
+
+```javascript
+// Portfolio Page
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useTranslations } from '../hooks/useTranslations'
+
+export default function PortfolioPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.portfolio, t.pageDescriptions.portfolio)
+  // Result: "Portfolio | CryptoDash"
+  
+  return <div>{/* Content */}</div>
+}
+```
+
+```javascript
+// Market Page
+export default function MarketPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.market, t.pageDescriptions.market)
+  // Result: "Market | CryptoDash"
+  
+  return <div>{/* Content */}</div>
+}
+```
+
+```javascript
+// Settings Page
+export default function SettingsPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.settings, t.pageDescriptions.settings)
+  // Result: "Settings | CryptoDash"
+  
+  return <div>{/* Content */}</div>
+}
+```
+
+```javascript
+// 404 Not Found Page
+export default function NotFoundPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.notFound, t.pageDescriptions.notFound)
+  // Result: "Page Not Found | CryptoDash"
+  
+  return <div>{/* Content */}</div>
+}
+```
+
+### Without Description
+
+```javascript
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+
+function SimplePage() {
+  // Only update title, not meta description
+  useDocumentTitle('Simple Page')
+  // Result: "Simple Page | CryptoDash"
+  
+  return <div>Content</div>
+}
+```
+
+### Dynamic Titles
+
+```javascript
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+
+function AssetDetailPage({ assetName }) {
+  useDocumentTitle(
+    `${assetName} Details`,
+    `View detailed information about ${assetName}`
+  )
+  // Result: "Bitcoin Details | CryptoDash"
+  
+  return <div>{/* Asset details */}</div>
+}
+```
+
+### With Translations
+
+```javascript TransactionsPage.jsx:9-83
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useTranslations } from '../hooks/useTranslations'
+
+export default function TransactionsPage() {
+  const t = useTranslations()
+  
+  useDocumentTitle(t.pageTitles.transactions, t.pageDescriptions.transactions)
+  
+  return (
+    <div className="page">
+      <h1>{t.pageTitles.transactions}</h1>
+      {/* Transaction list */}
+    </div>
+  )
+}
+```
+
+## Implementation Details
+
+### DOM Manipulation
+
+The hook directly manipulates the DOM:
+
+```javascript useDocumentTitle.js:8-37
+import { useEffect } from 'react'
+
+export function useDocumentTitle(title, description) {
+  useEffect(() => {
+    const previousTitle = document.title
+    
+    if (title) {
+      document.title = `${title} | CryptoDash`
+    } else {
+      document.title = 'CryptoDash'
+    }
+
+    let previousDescription = null
+    if (description) {
+      const metaDescription = document.querySelector('meta[name="description"]')
+      if (metaDescription) {
+        previousDescription = metaDescription.getAttribute('content')
+        metaDescription.setAttribute('content', description)
+      }
+    }
+
+    return () => {
+      document.title = previousTitle
+      if (previousDescription) {
+        const metaDescription = document.querySelector('meta[name="description"]')
+        if (metaDescription) {
+          metaDescription.setAttribute('content', previousDescription)
+        }
+      }
+    }
+  }, [title, description])
+}
+```
+
+### Effect Dependencies
+
+The effect re-runs whenever `title` or `description` changes, ensuring the document metadata stays in sync with the component state.
+
+### Meta Tag Requirements
+
+For the description update to work, your HTML must have a meta description tag:
+
+```html
+<head>
+  <meta name="description" content="Default description">
+</head>
+```
+
+If the tag doesn't exist, the description parameter is silently ignored.
+
+## SEO Benefits
+
+1. **Dynamic Titles**: Each page gets a unique, descriptive title in browser tabs and search results
+2. **Meta Descriptions**: Provides context for search engines and social media previews
+3. **Proper Cleanup**: Prevents title/description pollution when navigating between pages
+4. **SPA Support**: Essential for Single Page Applications where the HTML doesn't change
+
+## Best Practices
+
+1. **Call early in component**: Place the hook call near the top of your component function
+2. **Use with translations**: Combine with `useTranslations` for internationalized titles
+3. **Keep titles concise**: Aim for 50-60 characters for optimal display in search results
+4. **Descriptive descriptions**: Meta descriptions should be 150-160 characters
+5. **Always provide a title**: Even if you skip the description, always provide a title
+
+## Common Patterns
+
+### Standard Page Setup
+
+```javascript
+function MyPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.myPage, t.pageDescriptions.myPage)
+  
+  // Rest of component
+}
+```
+
+### Conditional Titles
+
+```javascript
+function DetailPage({ data, loading }) {
+  const title = loading ? 'Loading...' : data.name
+  const description = loading ? '' : data.description
+  
+  useDocumentTitle(title, description)
+  
+  // Rest of component
+}
+```
+
+## Browser Tab Display
+
+| Title Parameter | Resulting Tab Title |
+|----------------|---------------------|
+| `"Dashboard"` | "Dashboard \| CryptoDash" |
+| `"Portfolio"` | "Portfolio \| CryptoDash" |
+| `""` | "CryptoDash" |
+| `undefined` | "CryptoDash" |
+
+## Related Hooks
+
+- [useTranslations](/api/hooks/use-translations) - Commonly used to provide localized titles and descriptions
+
+## Source Location
+
+`/workspace/source/src/hooks/useDocumentTitle.js:8`

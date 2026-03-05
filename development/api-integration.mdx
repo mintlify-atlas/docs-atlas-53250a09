@@ -1,0 +1,599 @@
+---
+title: 'API Integration'
+description: 'Learn how CryptoDash integrates with the CoinGecko API using Axios'
+---
+
+## Overview
+
+CryptoDash uses the [CoinGecko API](https://www.coingecko.com/en/api) to fetch real-time cryptocurrency data. The integration is built with:
+
+- **Axios** for HTTP requests
+- **Environment variables** for configuration
+- **Request/response interceptors** for consistency
+- **In-memory caching** to reduce API calls
+
+## Axios Client Setup
+
+The base Axios client is configured in `src/api/axios.js`:
+
+```javascript src/api/axios.js
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_COINGECKO_BASE_URL ?? 'https://api.coingecko.com/api/v3'
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT ?? 10000)
+const API_KEY = import.meta.env.VITE_COINGECKO_API_KEY
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
+})
+
+export default apiClient
+```
+
+<Note>
+  Configuration values are read from Vite environment variables with fallback defaults.
+</Note>
+
+## Environment Configuration
+
+Create a `.env` file in the project root:
+
+```bash .env
+VITE_COINGECKO_BASE_URL=https://api.coingecko.com/api/v3
+VITE_API_TIMEOUT=10000
+VITE_COINGECKO_API_KEY=your_api_key_here  # Optional for Pro users
+```
+
+<Warning>
+  Never commit `.env` files to version control. Use `.env.example` as a template.
+</Warning>
+
+## Request Interceptors
+
+Request interceptors add headers and authentication:
+
+```javascript src/api/axios.js
+apiClient.interceptors.request.use(
+  (config) => {
+    const nextConfig = { ...config }
+
+    nextConfig.headers = {
+      Accept: 'application/json',
+      ...nextConfig.headers,
+    }
+
+    // Add CoinGecko Pro API key if available
+    if (API_KEY) {
+      nextConfig.headers['x-cg-pro-api-key'] = API_KEY
+    }
+
+    // Add auth token for future backend integration
+    const authToken = localStorage.getItem('auth_token')
+    if (authToken) {
+      nextConfig.headers.Authorization = `Bearer ${authToken}`
+    }
+
+    return nextConfig
+  },
+  (error) => Promise.reject(error),
+)
+```
+
+<Tabs>
+  <Tab title="Free API">
+    The free CoinGecko API doesn't require an API key. Simply omit `VITE_COINGECKO_API_KEY`.
+  </Tab>
+  
+  <Tab title="Pro API">
+    CoinGecko Pro users can add their API key to get higher rate limits:
+    
+    ```bash
+    VITE_COINGECKO_API_KEY=CG-xxxxxxxxxxxxx
+    ```
+    
+    The key is automatically added to the `x-cg-pro-api-key` header.
+  </Tab>
+</Tabs>
+
+## Response Interceptors
+
+Response interceptors normalize error handling:
+
+```javascript src/api/axios.js
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const normalizedError = {
+      status: error.response?.status ?? 0,
+      message: error.response?.data?.error || 
+               error.response?.data?.message || 
+               error.message || 
+               'Unexpected API error',
+      data: error.response?.data,
+      original: error,
+    }
+
+    return Promise.reject(normalizedError)
+  },
+)
+```
+
+This ensures all API errors have a consistent structure:
+
+```typescript
+{
+  status: number,
+  message: string,
+  data: any,
+  original: Error
+}
+```
+
+## API Modules
+
+### Dashboard API
+
+Fetches global cryptocurrency statistics.
+
+<CodeGroup>
+
+```javascript Implementation (src/api/dashboard/dashboardApi.js)
+import apiClient from '../axios'
+
+const GLOBAL_STATS_TTL_MS = 5 * 60 * 1000  // 5 minutes
+
+let globalStatsCache = {
+  data: null,
+  timestamp: 0,
+  inFlight: null,
+}
+
+export async function getGlobalStats() {
+  const now = Date.now()
+
+  // Return cached data if still valid
+  if (globalStatsCache.data && 
+      now - globalStatsCache.timestamp < GLOBAL_STATS_TTL_MS) {
+    return globalStatsCache.data
+  }
+
+  // Return in-flight request if one exists
+  if (globalStatsCache.inFlight) {
+    return globalStatsCache.inFlight
+  }
+
+  // Make new request
+  globalStatsCache.inFlight = apiClient
+    .get('/global')
+    .then(({ data }) => {
+      const normalizedData = data?.data ?? null
+      globalStatsCache = {
+        data: normalizedData,
+        timestamp: Date.now(),
+        inFlight: null,
+      }
+      return normalizedData
+    })
+    .catch((error) => {
+      globalStatsCache = {
+        ...globalStatsCache,
+        inFlight: null,
+      }
+      throw error
+    })
+
+  return globalStatsCache.inFlight
+}
+```
+
+```javascript Usage
+import { getGlobalStats } from '../api/dashboard/dashboardApi'
+
+const globalData = await getGlobalStats()
+console.log(globalData.total_market_cap.usd)
+```
+
+</CodeGroup>
+
+<Info>
+  This implementation includes **request deduplication** - multiple simultaneous calls return the same promise.
+</Info>
+
+### Market API
+
+Fetches market data and price charts.
+
+<Tabs>
+  <Tab title="Get Top Coins">
+    ```javascript src/api/market/marketApi.js
+    import apiClient from '../axios'
+
+    const MARKET_CACHE_TTL_MS = 5 * 60 * 1000
+    const topMarketCoinsCache = new Map()
+
+    export async function getTopMarketCoins({
+      vsCurrency = 'usd',
+      order = 'market_cap_desc',
+      perPage = 10,
+      page = 1,
+      sparkline = true,
+      priceChangePercentage = '24h,7d',
+    } = {}) {
+      const requestParams = {
+        vs_currency: vsCurrency,
+        order,
+        per_page: perPage,
+        page,
+        sparkline,
+        price_change_percentage: priceChangePercentage,
+      }
+
+      const cacheKey = JSON.stringify(requestParams)
+      const cached = getCachedEntry(topMarketCoinsCache, cacheKey)
+
+      if (cached?.data) {
+        return cached.data
+      }
+
+      if (cached?.inFlight) {
+        return cached.inFlight
+      }
+
+      const inFlight = apiClient
+        .get('/coins/markets', { params: requestParams })
+        .then(({ data }) => {
+          const normalizedData = data ?? []
+          topMarketCoinsCache.set(cacheKey, {
+            data: normalizedData,
+            timestamp: Date.now(),
+            inFlight: null,
+          })
+          return normalizedData
+        })
+        .catch((error) => {
+          topMarketCoinsCache.delete(cacheKey)
+          throw error
+        })
+
+      topMarketCoinsCache.set(cacheKey, {
+        data: null,
+        timestamp: 0,
+        inFlight,
+      })
+
+      return inFlight
+    }
+    ```
+    
+    **Usage:**
+    
+    ```javascript
+    // Get top 10 coins by market cap
+    const coins = await getTopMarketCoins()
+    
+    // Get top 20 with custom parameters
+    const coins = await getTopMarketCoins({
+      perPage: 20,
+      order: 'volume_desc'
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Get Price Chart">
+    ```javascript src/api/market/marketApi.js
+    export async function getCoinPerformanceChart({ 
+      coinId = 'bitcoin', 
+      vsCurrency = 'usd', 
+      days = 30 
+    } = {}) {
+      const requestParams = { coinId, vs_currency: vsCurrency, days }
+      const cacheKey = JSON.stringify(requestParams)
+      const cached = getCachedEntry(performanceChartCache, cacheKey)
+
+      if (cached?.data) return cached.data
+      if (cached?.inFlight) return cached.inFlight
+
+      const inFlight = apiClient
+        .get(`/coins/${coinId}/market_chart`, {
+          params: {
+            vs_currency: vsCurrency,
+            days,
+          },
+        })
+        .then(({ data }) => {
+          const normalizedData = data ?? { prices: [] }
+          performanceChartCache.set(cacheKey, {
+            data: normalizedData,
+            timestamp: Date.now(),
+            inFlight: null,
+          })
+          return normalizedData
+        })
+        .catch((error) => {
+          performanceChartCache.delete(cacheKey)
+          throw error
+        })
+
+      performanceChartCache.set(cacheKey, {
+        data: null,
+        timestamp: 0,
+        inFlight,
+      })
+
+      return inFlight
+    }
+    ```
+    
+    **Usage:**
+    
+    ```javascript
+    // Get Bitcoin 30-day chart
+    const chart = await getCoinPerformanceChart()
+    
+    // Get Ethereum 7-day chart
+    const chart = await getCoinPerformanceChart({
+      coinId: 'ethereum',
+      days: 7
+    })
+    
+    // Access price data
+    const prices = chart.prices.map(([timestamp, price]) => price)
+    ```
+  </Tab>
+</Tabs>
+
+### Portfolio API
+
+Manages portfolio data in localStorage (no backend).
+
+```javascript src/api/portfolio/portfolioApi.js
+const PORTFOLIO_STORAGE_KEY = 'crypto_dash_portfolios'
+const DEFAULT_ALLOCATION_USD = 2000
+
+function readPortfolios() {
+  const raw = localStorage.getItem(PORTFOLIO_STORAGE_KEY)
+  if (!raw) return []
+  
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writePortfolios(portfolios) {
+  localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(portfolios))
+}
+
+export function getOrCreatePrimaryPortfolio(marketCoins = []) {
+  const portfolios = readPortfolios()
+
+  if (!portfolios.length) {
+    // Create default portfolio with top 5 coins
+    const preferredAssets = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple']
+    const positions = preferredAssets
+      .filter(id => marketCoins.find(c => c.id === id))
+      .map(id => {
+        const coin = marketCoins.find(c => c.id === id)
+        return {
+          assetId: id,
+          investedUsd: DEFAULT_ALLOCATION_USD,
+          amount: DEFAULT_ALLOCATION_USD / coin.current_price,
+          createdAt: new Date().toISOString(),
+        }
+      })
+
+    const newPortfolio = {
+      id: 'main',
+      name: 'Portafolio Principal',
+      positions,
+      createdAt: new Date().toISOString(),
+    }
+
+    writePortfolios([newPortfolio])
+    return newPortfolio
+  }
+
+  return portfolios[0]
+}
+```
+
+<Note>
+  The Portfolio API uses localStorage instead of a backend. This makes the app work offline but limits data to a single device.
+</Note>
+
+## Caching Strategy
+
+CryptoDash implements multi-level caching:
+
+<Steps>
+  <Step title="In-Memory Cache">
+    API responses are cached in memory with a 5-minute TTL
+    
+    ```javascript
+    const CACHE_TTL_MS = 5 * 60 * 1000  // 5 minutes
+    ```
+  </Step>
+  
+  <Step title="Request Deduplication">
+    Multiple simultaneous requests for the same data share a single promise
+    
+    ```javascript
+    if (cache.inFlight) {
+      return cache.inFlight  // Reuse existing request
+    }
+    ```
+  </Step>
+  
+  <Step title="LocalStorage">
+    User settings and portfolio data persist in localStorage
+    
+    ```javascript
+    localStorage.setItem('crypto-dash-theme', theme)
+    ```
+  </Step>
+</Steps>
+
+## Error Handling
+
+All API errors are normalized and can be caught consistently:
+
+```javascript
+try {
+  const data = await getGlobalStats()
+} catch (error) {
+  console.error(`Status: ${error.status}`)    // HTTP status code
+  console.error(`Message: ${error.message}`)  // User-friendly message
+  console.error(`Data: ${error.data}`)        // Response data
+  console.error(`Original: ${error.original}`) // Original axios error
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Common Error Codes">
+    - **0** - Network error, timeout, or CORS issue
+    - **429** - Rate limit exceeded
+    - **404** - Endpoint not found
+    - **500** - Server error
+  </Accordion>
+  
+  <Accordion title="Rate Limiting">
+    CoinGecko free API limits:
+    
+    - **10-50 calls/minute** depending on endpoint
+    - Use caching to stay within limits
+    - Consider upgrading to Pro for higher limits
+  </Accordion>
+</AccordionGroup>
+
+## Complete Usage Example
+
+Here's how the dashboard fetches all data:
+
+```javascript src/hooks/useDashboardData.js
+import { getGlobalStats } from '../api/dashboard/dashboardApi'
+import { getCoinPerformanceChart, getTopMarketCoins } from '../api/market/marketApi'
+
+export function useDashboardData() {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchDashboardData() {
+      try {
+        setLoading(true)
+        setError('')
+
+        // Fetch all data in parallel
+        const [globalStats, topMarketCoins, btcChart] = await Promise.all([
+          getGlobalStats(),
+          getTopMarketCoins(),
+          getCoinPerformanceChart({ coinId: 'bitcoin', days: 30 }),
+        ])
+
+        if (!isMounted) return
+
+        // Update state with fetched data
+        setGlobalData(globalStats)
+        setMarkets(topMarketCoins)
+        setMainPerformanceSeries(btcChart.prices.map(item => item[1]))
+      } catch (err) {
+        if (!isMounted) return
+        setError('Failed to load data')
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  return { loading, error, /* ... data */ }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Parallel Requests">
+    Fetch independent data in parallel with `Promise.all()`:
+    
+    ```javascript
+    // Good - parallel (faster)
+    const [data1, data2] = await Promise.all([
+      getGlobalStats(),
+      getTopMarketCoins()
+    ])
+    
+    // Bad - sequential (slower)
+    const data1 = await getGlobalStats()
+    const data2 = await getTopMarketCoins()
+    ```
+  </Accordion>
+  
+  <Accordion title="Respect Cache TTL">
+    Don't manually clear cache unless necessary. The 5-minute TTL balances freshness and API usage.
+  </Accordion>
+  
+  <Accordion title="Handle Loading States">
+    Always show loading indicators during async operations:
+    
+    ```jsx
+    if (loading) return <SkeletonLoader />
+    if (error) return <ErrorMessage message={error} />
+    return <Data data={data} />
+    ```
+  </Accordion>
+  
+  <Accordion title="Clean Up Async Operations">
+    Use the `isMounted` pattern to prevent state updates after unmount:
+    
+    ```javascript
+    useEffect(() => {
+      let isMounted = true
+      
+      fetchData().then(data => {
+        if (isMounted) setState(data)
+      })
+      
+      return () => { isMounted = false }
+    }, [])
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing API Endpoints
+
+You can test CoinGecko endpoints directly:
+
+<CodeGroup>
+
+```bash cURL
+curl 'https://api.coingecko.com/api/v3/global'
+```
+
+```bash Browser
+https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10
+```
+
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Learn how API data is managed in React
+  </Card>
+  
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand where API modules are located
+  </Card>
+</CardGroup>

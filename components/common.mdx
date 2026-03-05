@@ -1,0 +1,636 @@
+---
+title: Common Components
+description: Reusable utility components including loaders, toasts, error boundaries, and animations
+---
+
+## Overview
+
+Common components are reusable utilities that provide consistent UI patterns across CryptoDash. They handle loading states, notifications, error handling, and animated value transitions.
+
+---
+
+## SkeletonLoader
+
+Loading state placeholders that create a smooth perceived performance while data loads.
+
+### Base Components
+
+#### SkeletonBox
+
+Generic rectangular skeleton with customizable styling.
+
+<ParamField path="className" type="string" default="">
+  Additional Tailwind classes for sizing and positioning
+</ParamField>
+
+<ParamField path="rounded" type="string" default="rounded-lg">
+  Border radius class (e.g., "rounded-full", "rounded-xl")
+</ParamField>
+
+```jsx
+import { SkeletonBox } from './components/common/SkeletonLoader'
+
+<SkeletonBox className="h-16 w-full" />
+<SkeletonBox className="h-10 w-16" rounded="rounded-xl" />
+```
+
+#### SkeletonText
+
+Text line skeleton with configurable width.
+
+<ParamField path="className" type="string" default="">
+  Additional Tailwind classes
+</ParamField>
+
+<ParamField path="width" type="string" default="w-full">
+  Width class (e.g., "w-32", "w-1/2")
+</ParamField>
+
+```jsx
+import { SkeletonText } from './components/common/SkeletonLoader'
+
+<SkeletonText width="w-32" className="mb-2" />
+<SkeletonText width="w-40" className="h-8" />
+```
+
+#### SkeletonCircle
+
+Circular skeleton for avatars and icons.
+
+<ParamField path="size" type="string" default="h-10 w-10">
+  Size classes for the circle (e.g., "h-8 w-8", "h-12 w-12")
+</ParamField>
+
+```jsx
+import { SkeletonCircle } from './components/common/SkeletonLoader'
+
+<SkeletonCircle size="h-8 w-8" />
+```
+
+### Composite Skeletons
+
+#### DashboardCardSkeleton
+
+Skeleton for dashboard summary cards.
+
+```jsx
+import { DashboardCardSkeleton } from './components/common/SkeletonLoader'
+
+{loading && Array.from({ length: 4 }).map((_, i) => (
+  <DashboardCardSkeleton key={i} />
+))}
+```
+
+**Structure:**
+- Title text (32px width)
+- Value text (40px width, 8px height)
+- Badge box (16px height, 64px width)
+- Chart box (64px height, full width)
+
+#### PortfolioRowSkeleton
+
+Skeleton for portfolio asset table rows.
+
+```jsx
+import { PortfolioRowSkeleton } from './components/common/SkeletonLoader'
+
+{loading && Array.from({ length: 5 }).map((_, i) => (
+  <PortfolioRowSkeleton key={i} />
+))}
+```
+
+**Structure:**
+- Circle (coin icon)
+- Two text lines (name and symbol)
+- Four text blocks (price, amount, value, change)
+
+#### MarketRowSkeleton
+
+Skeleton for market data table rows.
+
+```jsx
+import { MarketRowSkeleton } from './components/common/SkeletonLoader'
+
+<table>
+  <tbody>
+    {loading && Array.from({ length: 8 }).map((_, i) => (
+      <MarketRowSkeleton key={i} />
+    ))}
+  </tbody>
+</table>
+```
+
+**Structure (matches table columns):**
+- Rank number
+- Coin icon + name
+- Price
+- 24h change
+- 7d change
+- Market cap
+- Volume
+- Mini chart
+- Action button
+
+#### ChartSkeleton
+
+Skeleton for chart areas with animated bars.
+
+<ParamField path="height" type="string" default="h-56">
+  Height class for the chart container
+</ParamField>
+
+```jsx
+import { ChartSkeleton } from './components/common/SkeletonLoader'
+
+<ChartSkeleton height="h-64" />
+```
+
+**Features:**
+- 50 vertical bars with random heights (30-100%)
+- Simulates sparkline appearance
+- Rounded border container
+
+#### PerformanceChartSkeleton
+
+Full-featured skeleton for main performance charts.
+
+```jsx
+import { PerformanceChartSkeleton } from './components/common/SkeletonLoader'
+
+{loading ? <PerformanceChartSkeleton /> : <MainPerformanceChart {...props} />}
+```
+
+**Structure:**
+- Header with title and stats
+- Full chart skeleton
+- Border and padding matching actual chart
+
+### Usage in Pages
+
+```jsx
+import { DashboardCardSkeleton, PerformanceChartSkeleton, MarketRowSkeleton } from '../components/common/SkeletonLoader'
+
+export default function DashboardPage() {
+  const { loading, summaryCards, marketRows } = useOutletContext()
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <DashboardCardSkeleton key={i} />
+          ))}
+        </div>
+
+        {/* Chart */}
+        <PerformanceChartSkeleton />
+
+        {/* Table */}
+        <table>
+          <tbody>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <MarketRowSkeleton key={i} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  return (
+    // Actual content
+  )
+}
+```
+
+---
+
+## ToastContainer
+
+Global notification system with multiple toast types and animations.
+
+### Toast Types
+
+- **success** - Green toast for successful actions
+- **error** - Red toast for errors
+- **warning** - Yellow toast for warnings
+- **info** - Blue toast for informational messages
+
+### Context Integration
+
+ToastContainer reads from `ToastContext`:
+
+```jsx
+import { useToast } from '../../contexts/ToastContext'
+
+function MyComponent() {
+  const { success, error, info, warning } = useToast()
+
+  const handleSave = async () => {
+    try {
+      await saveData()
+      success('Data saved successfully!')
+    } catch (err) {
+      error('Failed to save data')
+    }
+  }
+
+  const handleInfo = () => {
+    info('Processing your request...', 5000) // 5 second duration
+  }
+
+  const handleWarning = () => {
+    warning('This action cannot be undone')
+  }
+}
+```
+
+### Toast Context API
+
+<ParamField path="success(message, duration?)" type="function">
+  Shows a success toast. Duration defaults to 3000ms.
+</ParamField>
+
+<ParamField path="error(message, duration?)" type="function">
+  Shows an error toast. Duration defaults to 3000ms.
+</ParamField>
+
+<ParamField path="info(message, duration?)" type="function">
+  Shows an info toast. Duration defaults to 3000ms.
+</ParamField>
+
+<ParamField path="warning(message, duration?)" type="function">
+  Shows a warning toast. Duration defaults to 3000ms.
+</ParamField>
+
+<ParamField path="addToast(message, type, duration?)" type="function">
+  Generic method to add a toast. Returns toast ID.
+</ParamField>
+
+<ParamField path="removeToast(id)" type="function">
+  Manually removes a toast by ID.
+</ParamField>
+
+### Features
+
+**Auto-dismiss**
+- Default duration: 3000ms (3 seconds)
+- Set `duration={0}` for persistent toasts
+- Progress bar shows remaining time
+
+**Pause on Hover**
+- Hovering pauses auto-dismiss timer
+- Progress bar pauses
+- Resume on mouse leave
+
+**Animations**
+- Slide in from right with bounce
+- Slide out to right on dismiss
+- Smooth fade and scale transitions
+
+**Stacking**
+- Multiple toasts stack vertically
+- Newest appears at bottom
+- 12px gap between toasts
+
+### Implementation
+
+Add `ToastContainer` to your root layout:
+
+```jsx
+import ToastContainer from './components/common/ToastContainer'
+import { ToastProvider } from './contexts/ToastContext'
+
+function App() {
+  return (
+    <ToastProvider>
+      <YourApp />
+      <ToastContainer />
+    </ToastProvider>
+  )
+}
+```
+
+### Styling
+
+**Success Toast**
+```css
+bg-[#2bee79]            /* Bright green */
+text-[#0B1F14]          /* Dark green text */
+border-[#2bee79]        /* Green border */
+```
+
+**Error Toast**
+```css
+bg-red-500
+text-white
+border-red-600
+```
+
+**Warning Toast**
+```css
+bg-yellow-500
+text-[#0B1F14]
+border-yellow-600
+```
+
+**Info Toast**
+```css
+bg-blue-500
+text-white
+border-blue-600
+```
+
+### Toast Icons
+
+- **success**: `check_circle`
+- **error**: `error`
+- **warning**: `warning`
+- **info**: `info`
+
+---
+
+## ErrorBoundary
+
+React Error Boundary component that catches JavaScript errors in child components.
+
+### Usage
+
+Wrap your component tree or specific sections:
+
+```jsx
+import ErrorBoundary from './components/common/ErrorBoundary'
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Your routes */}
+        </Routes>
+      </Router>
+    </ErrorBoundary>
+  )
+}
+```
+
+**Wrap specific sections:**
+```jsx
+<ErrorBoundary>
+  <ComplexChart data={chartData} />
+</ErrorBoundary>
+```
+
+### Features
+
+**Error Display**
+- Large error icon with pulse animation
+- User-friendly error message
+- Reassuring text about data safety
+
+**Developer Info (Development Only)**
+- Expandable details section
+- Error message display
+- Full component stack trace
+- Only shows when `import.meta.env.DEV === true`
+
+**Recovery Actions**
+- "Go to Dashboard" button - navigates to `/`
+- "Reload Page" button - full page refresh
+- Both buttons with clear icons and labels
+
+### Error State
+
+```typescript
+state = {
+  hasError: boolean,
+  error: Error | null,
+  errorInfo: ErrorInfo | null
+}
+```
+
+### Lifecycle Methods
+
+**getDerivedStateFromError**
+```jsx
+static getDerivedStateFromError(error) {
+  return { hasError: true }
+}
+```
+
+**componentDidCatch**
+```jsx
+componentDidCatch(error, errorInfo) {
+  console.error('Error caught by boundary:', error, errorInfo)
+  this.setState({ error, errorInfo })
+}
+```
+
+### Recovery Handlers
+
+**Reset to Dashboard**
+```jsx
+handleReset = () => {
+  this.setState({ hasError: false, error: null, errorInfo: null })
+  window.location.href = '/'
+}
+```
+
+**Reload Page**
+```jsx
+handleReload = () => {
+  window.location.reload()
+}
+```
+
+### Accessibility
+
+- Semantic error messaging
+- High contrast error colors
+- Clear action buttons
+- Keyboard navigable
+
+---
+
+## CountUpValue
+
+Animated number component that smoothly transitions from 0 to a target value.
+
+### Props
+
+<ParamField path="value" type="number" required>
+  Target value to animate to. Can be any number.
+</ParamField>
+
+<ParamField path="formatter" type="function">
+  Optional function to format the display value. Receives current animated value as parameter.
+</ParamField>
+
+### Usage Examples
+
+**Basic usage:**
+```jsx
+import CountUpValue from './components/common/CountUpValue'
+
+<CountUpValue value={42500} />
+// Animates from 0 to 42500
+```
+
+**With formatting:**
+```jsx
+import CountUpValue from './components/common/CountUpValue'
+import { formatCurrency } from './utils/formatters'
+
+<CountUpValue 
+  value={42567.89} 
+  formatter={(val) => formatCurrency(val)}
+/>
+// Displays: $0 → $42,567.89
+```
+
+**In a card:**
+```jsx
+<div className="card">
+  <p className="text-sm">Total Portfolio Value</p>
+  <p className="text-3xl font-bold">
+    <CountUpValue 
+      value={totalValue} 
+      formatter={(val) => `$${val.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`}
+    />
+  </p>
+</div>
+```
+
+### Animation Details
+
+**Duration:** 900ms (0.9 seconds)
+
+**Easing:** Cubic ease-out
+```javascript
+const eased = 1 - (1 - progress) ** 3
+```
+
+This creates a smooth deceleration effect where the number starts fast and slows down as it approaches the target.
+
+**Frame Rate:** Uses `requestAnimationFrame` for smooth 60fps animation
+
+### Implementation
+
+```jsx
+import { useEffect, useState } from 'react'
+
+const animationDurationMs = 900
+
+export default function CountUpValue({ value = 0, formatter }) {
+  const targetValue = Number(value) || 0
+  const [displayValue, setDisplayValue] = useState(0)
+
+  useEffect(() => {
+    if (!targetValue) {
+      setDisplayValue(0)
+      return
+    }
+
+    let rafId = null
+    const startAt = performance.now()
+
+    function animate(now) {
+      const progress = Math.min((now - startAt) / animationDurationMs, 1)
+      const eased = 1 - (1 - progress) ** 3
+      setDisplayValue(targetValue * eased)
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(animate)
+      }
+    }
+
+    rafId = requestAnimationFrame(animate)
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [targetValue])
+
+  const formattedValue = formatter ? formatter(displayValue) : String(displayValue)
+
+  return <>{formattedValue}</>
+}
+```
+
+### Performance Notes
+
+- Uses `requestAnimationFrame` for optimal performance
+- Cleanup cancels animation on unmount
+- Restarts animation when `value` prop changes
+- Memoizes formatted value to prevent unnecessary recalculations
+
+### Common Formatters
+
+**Currency:**
+```jsx
+formatter={(val) => new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2
+}).format(val)}
+```
+
+**Percentage:**
+```jsx
+formatter={(val) => `${val.toFixed(2)}%`}
+```
+
+**Compact notation:**
+```jsx
+formatter={(val) => new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  compactDisplay: 'short'
+}).format(val)}
+// 1,000,000 → 1M
+```
+
+**Cryptocurrency:**
+```jsx
+formatter={(val) => val.toFixed(8) + ' BTC'}
+```
+
+## Best Practices
+
+### Skeleton Loaders
+
+1. **Match actual content structure** - Use skeleton that mirrors real component layout
+2. **Show appropriate count** - Display same number of skeleton items as expected data
+3. **Keep simple** - Don't over-complicate skeleton designs
+4. **Use composite skeletons** - Prefer `DashboardCardSkeleton` over building from base components
+
+### Toasts
+
+1. **Keep messages concise** - One sentence is ideal
+2. **Use appropriate types** - Success for confirmations, error for failures
+3. **Set reasonable durations** - 3-5 seconds for most messages
+4. **Avoid toast spam** - Don't show multiple toasts for same action
+5. **Use persistent toasts sparingly** - Set `duration={0}` only when user action required
+
+### Error Boundaries
+
+1. **Wrap at route level** - Catch errors per major section
+2. **Use multiple boundaries** - Don't rely on single root boundary
+3. **Log errors** - Always log to monitoring service in production
+4. **Provide recovery** - Give users clear next steps
+
+### Animated Values
+
+1. **Use for important metrics** - Total value, profit/loss, key stats
+2. **Don't overuse** - Too many animations are distracting
+3. **Provide formatter** - Always format currency, percentages properly
+4. **Consider accessibility** - Some users prefer reduced motion
+
+## Related Documentation
+
+- [Layout Components](/components/layout) - Sidebar, TopBar
+- [Chart Components](/components/charts) - Data visualizations
+- [Component Overview](/components/overview) - Architecture patterns

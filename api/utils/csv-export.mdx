@@ -1,0 +1,145 @@
+---
+title: 'CSV Export'
+description: 'Export data to CSV files'
+icon: 'file-csv'
+---
+
+## exportToCSV
+
+Exports an array of objects to a CSV file and triggers a browser download.
+
+### Function Signature
+
+```javascript
+exportToCSV(data, headers, filename = 'export')
+```
+
+### Parameters
+
+<ParamField path="data" type="Array<Object>" required>
+  Array of objects to export. Each object represents a row in the CSV file.
+</ParamField>
+
+<ParamField path="headers" type="Array<Object>" required>
+  Array of header definitions that map object keys to column labels.
+  
+  Each header object should have:
+  - `key` (string): The property name in the data objects
+  - `label` (string): The column header label to display in the CSV
+</ParamField>
+
+<ParamField path="filename" type="string" default="export">
+  Name of the file without extension. A timestamp (YYYY-MM-DD) and `.csv` extension will be automatically appended.
+</ParamField>
+
+### Behavior
+
+- Automatically escapes values containing commas, quotes, or newlines
+- Handles `null` and `undefined` values by converting them to empty strings
+- Appends current date (YYYY-MM-DD format) to the filename
+- Triggers browser download automatically
+- Creates UTF-8 encoded CSV files
+
+### Usage Examples
+
+#### Exporting Transaction Data
+
+```javascript
+import { exportToCSV } from '../utils/csvExport'
+
+const transactions = [
+  { id: 1, asset: 'BTC', amount: 0.5, priceUsd: 43500, feeUsd: 2.5 },
+  { id: 2, asset: 'ETH', amount: 2.0, priceUsd: 2800, feeUsd: 1.2 }
+]
+
+const headers = [
+  { key: 'id', label: 'Transaction ID' },
+  { key: 'asset', label: 'Asset' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'priceUsd', label: 'Price (USD)' },
+  { key: 'feeUsd', label: 'Fee (USD)' }
+]
+
+exportToCSV(transactions, headers, 'transactions')
+// Downloads: transactions_2026-03-05.csv
+```
+
+#### Exporting Portfolio Holdings
+
+```javascript
+const portfolioRows = [
+  { 
+    symbol: 'BTC', 
+    name: 'Bitcoin',
+    holdings: 0.5,
+    currentPrice: 43500,
+    currentValueUsd: 21750,
+    change24h: 2.5,
+    change7d: 5.3
+  }
+]
+
+const headers = [
+  { key: 'symbol', label: 'Symbol' },
+  { key: 'name', label: 'Name' },
+  { key: 'holdings', label: 'Holdings' },
+  { key: 'currentPrice', label: 'Current Price' },
+  { key: 'currentValueUsd', label: 'Value (USD)' },
+  { key: 'change24h', label: 'Change 24h (%)' },
+  { key: 'change7d', label: 'Change 7d (%)' }
+]
+
+exportToCSV(portfolioRows, headers, 'portfolio')
+// Downloads: portfolio_2026-03-05.csv
+```
+
+#### Handling Special Characters
+
+The function automatically handles values with special characters:
+
+```javascript
+const data = [
+  { name: 'Smith, John', note: 'Contains "quotes"', value: 1000 },
+  { name: 'Johnson', note: 'Multi\nline\ntext', value: 2000 }
+]
+
+const headers = [
+  { key: 'name', label: 'Name' },
+  { key: 'note', label: 'Note' },
+  { key: 'value', label: 'Value' }
+]
+
+exportToCSV(data, headers, 'special-chars')
+// Values with commas, quotes, or newlines are automatically escaped
+```
+
+### CSV Output Format
+
+The generated CSV file will have:
+- First row: Header labels from the `label` property
+- Subsequent rows: Data values from the `key` properties
+- Proper escaping for special characters
+- UTF-8 encoding with BOM for Excel compatibility
+
+Example output:
+
+```csv
+Symbol,Name,Holdings,Current Price,Value (USD)
+BTC,Bitcoin,0.5,43500,21750
+ETH,Ethereum,2.0,2800,5600
+```
+
+### Related Functions
+
+This utility is built on top of internal helper functions:
+
+- `convertToCSV(data, headers)`: Converts array to CSV string format
+- `downloadCSV(csvContent, filename)`: Triggers browser download
+
+<Note>
+  The file will be downloaded to the user's default Downloads folder. The browser's download behavior may vary based on user settings.
+</Note>
+
+<Warning>
+  This function requires a browser environment with DOM access. It will not work in Node.js or server-side contexts.
+</Warning>

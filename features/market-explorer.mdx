@@ -1,0 +1,361 @@
+---
+title: Market Explorer
+description: Browse and search 2,500+ cryptocurrencies with real-time prices, filters, and detailed asset information
+---
+
+## Overview
+
+The Market Explorer provides comprehensive access to live cryptocurrency market data for over 2,500 coins. Search, filter, and analyze market trends with real-time prices, 24h/7d changes, market cap, trading volume, and 7-day sparkline charts.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="2,500+ Cryptocurrencies" icon="coins">
+    Browse the entire CoinGecko market catalog
+  </Card>
+  <Card title="Real-time Search" icon="magnifying-glass">
+    Instantly search by name or symbol
+  </Card>
+  <Card title="Advanced Filters" icon="filter">
+    Filter by market cap, volume, and 24h change
+  </Card>
+  <Card title="Asset Preview" icon="sidebar">
+    Side drawer with detailed coin information
+  </Card>
+</CardGroup>
+
+## Global Market Statistics
+
+Three summary cards at the top display aggregated market data:
+
+### Total Market Cap
+Sum of all cryptocurrency market capitalizations.
+
+### 24h Volume
+Total trading volume across all assets in the last 24 hours.
+
+### BTC Dominance
+Bitcoin's market cap as a percentage of the total crypto market, with a visual progress bar.
+
+```jsx MarketPage.jsx:206-243
+const globalStats = {
+  totalMarketCap: markets.reduce((acc, coin) => acc + (coin.market_cap || 0), 0),
+  totalVolume24h: markets.reduce((acc, coin) => acc + (coin.total_volume || 0), 0),
+  btcDominance: markets.length > 0 
+    ? ((markets[0]?.market_cap || 0) / markets.reduce((acc, coin) => acc + (coin.market_cap || 0), 0)) * 100 
+    : 0,
+}
+
+{/* Market Cap Card */}
+<div className="group rounded-xl border bg-white p-6">
+  <p className="text-xs font-medium">Total Market Cap</p>
+  <h3 className="text-2xl font-black">
+    {formatCompactCurrency(globalStats.totalMarketCap)}
+  </h3>
+</div>
+
+{/* BTC Dominance Card with Progress Bar */}
+<div className="group rounded-xl border bg-white p-6">
+  <p className="text-xs font-medium">BTC Dominance</p>
+  <h3 className="text-2xl font-black">{globalStats.btcDominance.toFixed(1)}%</h3>
+  <div className="mt-2 h-2 w-full rounded-full bg-slate-200">
+    <div 
+      className="h-full rounded-full bg-[#2bee79]" 
+      style={{ width: `${globalStats.btcDominance}%` }}
+    />
+  </div>
+</div>
+```
+
+<Info>
+Global stats are calculated client-side from the top markets data returned by the CoinGecko API.
+</Info>
+
+## Search and Filters
+
+### Real-time Search
+
+Search cryptocurrencies by name or symbol with instant results:
+
+```jsx MarketPage.jsx:136-147
+<input
+  type="text"
+  placeholder="Search cryptocurrencies..."
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+  className="w-full rounded-lg border-none bg-white py-2 pl-10 pr-4"
+/>
+```
+
+The search filters the market list in real-time:
+
+```javascript MarketPage.jsx:28-48
+const filteredMarkets = markets.filter((coin) => {
+  const matchesSearch =
+    coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+
+  // ... additional filters
+
+  return matchesSearch && matchesMarketCap && matchesVolume && matchesChange
+})
+```
+
+### Advanced Filters
+
+<Tabs>
+  <Tab title="Market Cap">
+    Filter cryptocurrencies by market capitalization:
+
+    - **All Market Cap**: No filtering
+    - **< $1B**: Small cap coins
+    - **$1B - $10B**: Medium cap coins
+    - **> $10B**: Large cap coins (Bitcoin, Ethereum, etc.)
+
+    ```javascript MarketPage.jsx:33-36
+    let matchesMarketCap = true
+    if (filterMarketCap === 'small') matchesMarketCap = coin.market_cap < 1_000_000_000
+    else if (filterMarketCap === 'medium') matchesMarketCap = coin.market_cap >= 1_000_000_000 && coin.market_cap < 10_000_000_000
+    else if (filterMarketCap === 'large') matchesMarketCap = coin.market_cap >= 10_000_000_000
+    ```
+  </Tab>
+  <Tab title="Volume">
+    Filter by 24-hour trading volume:
+
+    - **All Volume**: No filtering
+    - **< $100M**: Low volume
+    - **$100M - $1B**: Medium volume
+    - **> $1B**: High volume
+
+    ```javascript MarketPage.jsx:38-41
+    let matchesVolume = true
+    if (filterVolume === 'low') matchesVolume = coin.total_volume < 100_000_000
+    else if (filterVolume === 'medium') matchesVolume = coin.total_volume >= 100_000_000 && coin.total_volume < 1_000_000_000
+    else if (filterVolume === 'high') matchesVolume = coin.total_volume >= 1_000_000_000
+    ```
+  </Tab>
+  <Tab title="24h Change">
+    Filter by price movement:
+
+    - **All Changes**: No filtering
+    - **📈 Gainers**: Positive 24h change
+    - **📉 Losers**: Negative 24h change
+
+    ```javascript MarketPage.jsx:43-45
+    let matchesChange = true
+    if (filterChange24h === 'positive') matchesChange = coin.price_change_percentage_24h > 0
+    else if (filterChange24h === 'negative') matchesChange = coin.price_change_percentage_24h < 0
+    ```
+  </Tab>
+</Tabs>
+
+### Reset Filters
+
+A reset button appears when any filter is active:
+
+```jsx MarketPage.jsx:190-202
+{(filterMarketCap !== 'all' || filterVolume !== 'all' || filterChange24h !== 'all') && (
+  <button
+    onClick={() => {
+      setFilterMarketCap('all')
+      setFilterVolume('all')
+      setFilterChange24h('all')
+    }}
+    className="flex items-center gap-1 rounded-lg bg-red-500/10 px-3 py-2"
+  >
+    <span className="material-symbols-outlined text-sm">close</span>
+    Reset
+  </button>
+)}
+```
+
+## Market Table
+
+Displays the top 20 filtered cryptocurrencies with comprehensive market data:
+
+### Table Columns
+
+| Column | Description | Example |
+|--------|-------------|----------|
+| **Rank** | Market cap ranking | 1, 2, 3... |
+| **Asset** | Coin name, symbol, and icon | Bitcoin (BTC) |
+| **Price** | Current price in USD | $45,234.56 |
+| **24h %** | 24-hour price change | +2.45% |
+| **7d %** | 7-day price change | -1.23% |
+| **Market Cap** | Total market capitalization | $856B |
+| **Volume** | 24-hour trading volume | $32.4B |
+| **Last 7 Days** | Sparkline chart | 📈 |
+| **Actions** | Favorite button | ⭐ |
+
+### Row Implementation
+
+```jsx MarketPage.jsx:294-352
+{topMarkets.map((coin, index) => (
+  <tr
+    key={coin.id}
+    onClick={() => handleAssetClick(coin)}
+    className="group cursor-pointer hover:bg-slate-50"
+  >
+    <td className="px-6 py-5">{index + 1}</td>
+    <td className="px-6 py-5">
+      <div className="flex items-center gap-3">
+        <img src={coin.image} alt={coin.name} className="size-8 rounded-full" />
+        <div>
+          <p className="font-bold">{coin.name}</p>
+          <p className="text-xs uppercase">{coin.symbol}</p>
+        </div>
+      </div>
+    </td>
+    <td className="px-6 py-5 text-right font-semibold">
+      {formatCurrency(coin.current_price)}
+    </td>
+    <td className={`px-6 py-5 text-right font-medium ${
+      coin.price_change_percentage_24h >= 0 ? 'text-[#2bee79]' : 'text-red-500'
+    }`}>
+      {coin.price_change_percentage_24h >= 0 ? '+' : ''}
+      {coin.price_change_percentage_24h?.toFixed(2)}%
+    </td>
+    {/* ... more columns */}
+    <td className="px-6 py-5 w-32">
+      {coin.sparkline_in_7d?.price && (
+        <svg className="h-8 w-full" viewBox="0 0 100 30">
+          <path
+            d={generateSparklinePath(coin.sparkline_in_7d.price)}
+            fill="none"
+            stroke={coin.price_change_percentage_7d_in_currency >= 0 ? '#2bee79' : '#ff4d4d'}
+            strokeWidth="2"
+          />
+        </svg>
+      )}
+    </td>
+  </tr>
+))}
+```
+
+### Sparkline Generation
+
+Each row includes a mini chart showing the 7-day price trend:
+
+```javascript MarketPage.jsx:379-393
+function generateSparklinePath(prices) {
+  if (!prices || prices.length === 0) return ''
+
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+
+  const points = prices.map((price, index) => {
+    const x = (index / (prices.length - 1)) * 100
+    const y = 30 - ((price - min) / range) * 30
+    return `${x},${y}`
+  })
+
+  return `M ${points.join(' L ')}`
+}
+```
+
+<Tip>
+Click any row to open the Asset Preview Drawer with detailed information about that cryptocurrency.
+</Tip>
+
+## Asset Preview Drawer
+
+When you click a row in the market table, a side drawer slides in with detailed coin information:
+
+```jsx MarketPage.jsx:368-374
+{selectedAsset && (
+  <AssetPreviewDrawer
+    asset={selectedAsset}
+    onClose={() => setSelectedAsset(null)}
+    onViewInPortfolio={handleViewInPortfolio}
+  />
+)}
+```
+
+The drawer displays:
+- Coin name, symbol, and logo
+- Current price and 24h change
+- Market cap and rank
+- Trading volume
+- All-time high/low
+- Circulating/total supply
+- Link to view in portfolio
+
+## Tabs
+
+Switch between different market views:
+
+```jsx MarketPage.jsx:250-269
+<button
+  onClick={() => setActiveTab('all')}
+  className={`rounded-lg px-4 py-2 text-xs font-bold ${
+    activeTab === 'all'
+      ? 'bg-[#2bee79] text-[#0B1F14]'
+      : 'text-slate-600 hover:bg-slate-100'
+  }`}
+>
+  Cryptocurrencies
+</button>
+<button
+  onClick={() => setActiveTab('defi')}
+  className={`rounded-lg px-4 py-2 text-xs font-bold ${
+    activeTab === 'defi'
+      ? 'bg-[#2bee79] text-[#0B1F14]'
+      : 'text-slate-600 hover:bg-slate-100'
+  }`}
+>
+  DeFi
+</button>
+```
+
+<Note>
+Currently both tabs show the same data. In a future version, the DeFi tab will filter to show only DeFi-specific tokens.
+</Note>
+
+## Data Source
+
+Market data comes from the CoinGecko `/coins/markets` endpoint:
+
+```javascript marketApi.js
+export async function getTopMarketCoins({
+  vsCurrency = 'usd',
+  order = 'market_cap_desc',
+  perPage = 250,
+  page = 1,
+  sparkline = true,
+  priceChangePercentage = '7d',
+}) {
+  const response = await apiClient.get('/coins/markets', {
+    params: {
+      vs_currency: vsCurrency,
+      order,
+      per_page: perPage,
+      page,
+      sparkline,
+      price_change_percentage: priceChangePercentage,
+    },
+  })
+  return response.data
+}
+```
+
+<Info>
+The market data is cached for 5 minutes to reduce API calls and improve performance.
+</Info>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Market Components" icon="puzzle-piece" href="/components/overview">
+    AssetPreviewDrawer component
+  </Card>
+  <Card title="Market API" icon="code" href="/api/services/market-api">
+    Market data fetching functions
+  </Card>
+  <Card title="Formatters" icon="hashtag" href="/api/utils/formatters">
+    Currency and number formatting
+  </Card>
+  <Card title="Chart Helpers" icon="chart-line" href="/api/utils/chart-helpers">
+    Sparkline path generation utilities
+  </Card>
+</CardGroup>

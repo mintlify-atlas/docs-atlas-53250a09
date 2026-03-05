@@ -1,0 +1,258 @@
+---
+title: 'useTranslations'
+description: 'Custom React hook for accessing localized translations based on the current language setting'
+---
+
+## Overview
+
+The `useTranslations` hook provides access to the application's translation system. It retrieves the current language setting from the Settings Context and returns the appropriate translation object. This hook is used throughout the application for internationalization (i18n).
+
+## Import
+
+```javascript
+import { useTranslations } from '../hooks/useTranslations'
+```
+
+## Signature
+
+```javascript
+function useTranslations(): TranslationObject
+```
+
+## Parameters
+
+This hook takes no parameters.
+
+## Return Value
+
+Returns a translation object for the current language containing all localized strings. The object structure includes:
+
+<ResponseField name="common" type="object">
+  Common translations used across the app:
+  - `errors`: Error messages (e.g., `loadData`, `selectAsset`, `updatePortfolio`)
+  - Other common UI strings
+</ResponseField>
+
+<ResponseField name="dashboard" type="object">
+  Dashboard-specific translations:
+  - `totalPortfolioBalance`: "Total Portfolio Balance" label
+  - `portfolio24hChange`: "24h Change" label
+  - `btcPrice`: "Bitcoin Price" label
+  - `ethPrice`: "Ethereum Price" label
+  - `performance`: "Performance" label
+  - `period`: Object with time periods (`30d`, `7d`, etc.)
+</ResponseField>
+
+<ResponseField name="pageTitles" type="object">
+  Page titles for document metadata:
+  - `dashboard`: Dashboard page title
+  - `portfolio`: Portfolio page title
+  - `market`: Market page title
+  - `transactions`: Transactions page title
+  - `settings`: Settings page title
+  - `analysis`: Analysis page title
+  - `notFound`: 404 page title
+</ResponseField>
+
+<ResponseField name="pageDescriptions" type="object">
+  Page descriptions for SEO meta tags, matching the structure of `pageTitles`
+</ResponseField>
+
+<ResponseField name="[other]" type="object">
+  Additional translation groups for other features and components
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage in Components
+
+```javascript DashboardPage.jsx:8-12
+import { useTranslations } from '../hooks/useTranslations'
+
+export default function DashboardPage() {
+  const t = useTranslations()
+  useDocumentTitle(t.pageTitles.dashboard, t.pageDescriptions.dashboard)
+  
+  return (
+    <div>
+      <h1>{t.dashboard.performance}</h1>
+      {/* Component content */}
+    </div>
+  )
+}
+```
+
+### Error Messages
+
+```javascript
+import { useTranslations } from '../hooks/useTranslations'
+
+function PortfolioManager() {
+  const t = useTranslations()
+  
+  const handleAddAsset = async (assetId) => {
+    if (!assetId) {
+      throw new Error(t.common.errors.selectAsset)
+    }
+    
+    try {
+      // Add asset logic
+    } catch (error) {
+      setError(t.common.errors.updatePortfolio)
+    }
+  }
+  
+  return (
+    <div>{/* Component JSX */}</div>
+  )
+}
+```
+
+### Navigation and Sidebar
+
+```javascript Sidebar.jsx:5-31
+import { useTranslations } from '../../hooks/useTranslations'
+
+export default function Sidebar({ isOpen, onClose }) {
+  const t = useTranslations()
+  
+  const menuItems = [
+    { path: '/dashboard', label: t.pageTitles.dashboard, icon: HomeIcon },
+    { path: '/portfolio', label: t.pageTitles.portfolio, icon: WalletIcon },
+    { path: '/market', label: t.pageTitles.market, icon: ChartIcon },
+    { path: '/transactions', label: t.pageTitles.transactions, icon: ListIcon },
+  ]
+  
+  return (
+    <nav>
+      {menuItems.map(item => (
+        <a key={item.path} href={item.path}>
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  )
+}
+```
+
+### Table Headers
+
+```javascript MarketTable.jsx:1-4
+import { useTranslations } from '../../hooks/useTranslations'
+
+function MarketTable({ marketRows }) {
+  const t = useTranslations()
+  
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{t.market.asset}</th>
+          <th>{t.market.price}</th>
+          <th>{t.market.change24h}</th>
+          <th>{t.market.marketCap}</th>
+          <th>{t.market.volume}</th>
+          <th>{t.market.last7Days}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {marketRows.map(row => (
+          <tr key={row.symbol}>
+            {/* Row content */}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+```
+
+### Settings Page
+
+```javascript SettingsPage.jsx:5-15
+import { useTranslations } from '../hooks/useTranslations'
+
+export default function SettingsPage() {
+  const t = useTranslations()
+  
+  useDocumentTitle(t.pageTitles.settings, t.pageDescriptions.settings)
+  
+  return (
+    <div>
+      <h1>{t.settings.title}</h1>
+      <section>
+        <h2>{t.settings.language}</h2>
+        {/* Language selector */}
+      </section>
+    </div>
+  )
+}
+```
+
+## Implementation Details
+
+### Language Detection
+
+The hook uses the `useSettings` hook from the Settings Context to retrieve the current language preference:
+
+```javascript useTranslations.js:1-7
+import { useSettings } from '../contexts/SettingsContext'
+import { translations } from '../i18n/translations'
+
+export function useTranslations() {
+  const { language } = useSettings()
+  return translations[language] || translations.en
+}
+```
+
+### Fallback Behavior
+
+- If the selected language is not available, the hook falls back to English (`translations.en`)
+- This ensures the application always has valid translations, even if a language is incomplete
+
+### Translation Structure
+
+Translations are organized hierarchically:
+```
+translations
+├── en (English)
+│   ├── common
+│   ├── dashboard
+│   ├── pageTitles
+│   └── ...
+├── es (Spanish)
+│   ├── common
+│   ├── dashboard
+│   └── ...
+└── [other languages]
+```
+
+## Best Practices
+
+1. **Call at component top level**: Always call `useTranslations()` at the beginning of your component
+2. **Store in `t` variable**: Use the conventional `t` variable name for consistency
+3. **Don't destructure deeply**: Access translations via dot notation (e.g., `t.dashboard.title`) rather than destructuring
+4. **Check translation keys**: Ensure all translation keys exist in all language files to avoid undefined values
+
+## Common Translation Keys
+
+| Key | Description | Example |
+|-----|-------------|----------|
+| `t.common.errors.loadData` | Generic data loading error | "Failed to load data" |
+| `t.pageTitles.[page]` | Page title | "Dashboard" |
+| `t.pageDescriptions.[page]` | Page meta description | "View your crypto portfolio" |
+| `t.dashboard.performance` | Performance chart title | "Performance" |
+
+## Related Hooks
+
+- [useDocumentTitle](/api/hooks/use-document-title) - Often used together with translations for page titles
+- [useDashboardData](/api/hooks/use-dashboard-data) - Uses translations internally for error messages
+
+## Related Context
+
+- **SettingsContext**: Provides the current language setting via `useSettings` hook
+
+## Source Location
+
+`/workspace/source/src/hooks/useTranslations.js:4`

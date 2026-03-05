@@ -1,0 +1,531 @@
+---
+title: 'State Management'
+description: 'Learn about CryptoDash state management using Context API and custom hooks'
+---
+
+## Overview
+
+CryptoDash uses React's built-in state management solutions:
+
+- **Context API** for global state (theme, settings, notifications)
+- **Custom Hooks** for reusable stateful logic
+- **Component State** for local UI state
+
+No external state management libraries (Redux, MobX) are used, keeping the architecture simple and maintainable.
+
+## Context Providers
+
+### SettingsContext
+
+Manages global application settings including theme and language preferences.
+
+<CodeGroup>
+
+```jsx Context Definition (src/contexts/SettingsContext.jsx)
+import { createContext, useContext, useState, useEffect } from 'react'
+
+const SettingsContext = createContext()
+
+export function SettingsProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('crypto-dash-theme')
+    return saved || 'dark'
+  })
+
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem('crypto-dash-language')
+    return saved || 'en'
+  })
+  
+  // Persist theme changes
+  useEffect(() => {
+    localStorage.setItem('crypto-dash-theme', theme)
+    
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  }
+
+  const value = {
+    theme,
+    setTheme,
+    toggleTheme,
+    language,
+    setLanguage,
+    toggleLanguage,
+  }
+
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  )
+}
+```
+
+```jsx Usage
+import { useSettings } from '../contexts/SettingsContext'
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useSettings()
+  
+  return (
+    <button onClick={toggleTheme}>
+      Current: {theme}
+    </button>
+  )
+}
+```
+
+</CodeGroup>
+
+<Note>
+  The SettingsContext automatically persists preferences to localStorage and synchronizes the `dark` class on the HTML element.
+</Note>
+
+### ToastContext
+
+Manages global toast notifications with auto-dismiss functionality.
+
+<CodeGroup>
+
+```jsx Context Definition (src/contexts/ToastContext.jsx)
+import { createContext, useCallback, useContext, useState } from 'react'
+
+const ToastContext = createContext(null)
+
+export function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([])
+
+  const addToast = useCallback((message, type = 'info', duration = 3000) => {
+    const id = Date.now()
+    const newToast = { id, message, type, duration }
+    
+    setToasts((prev) => [...prev, newToast])
+
+    if (duration > 0) {
+      setTimeout(() => {
+        removeToast(id)
+      }, duration)
+    }
+
+    return id
+  }, [])
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id))
+  }, [])
+
+  const success = useCallback((message, duration) => 
+    addToast(message, 'success', duration), [addToast])
+  const error = useCallback((message, duration) => 
+    addToast(message, 'error', duration), [addToast])
+  const info = useCallback((message, duration) => 
+    addToast(message, 'info', duration), [addToast])
+  const warning = useCallback((message, duration) => 
+    addToast(message, 'warning', duration), [addToast])
+
+  return (
+    <ToastContext.Provider value={{ 
+      toasts, addToast, removeToast, success, error, info, warning 
+    }}>
+      {children}
+    </ToastContext.Provider>
+  )
+}
+```
+
+```jsx Usage
+import { useToast } from '../contexts/ToastContext'
+
+function MyComponent() {
+  const toast = useToast()
+  
+  const handleSave = async () => {
+    try {
+      await saveData()
+      toast.success('Saved successfully!')
+    } catch (error) {
+      toast.error('Failed to save')
+    }
+  }
+  
+  return <button onClick={handleSave}>Save</button>
+}
+```
+
+</CodeGroup>
+
+## Custom Hooks
+
+CryptoDash includes several powerful custom hooks for reusable logic:
+
+### useDashboardData
+
+The main hook for fetching and managing dashboard data.
+
+<Tabs>
+  <Tab title="Overview">
+    Located at `src/hooks/useDashboardData.js`, this hook:
+    
+    - Fetches global crypto statistics
+    - Loads top market coins
+    - Manages portfolio data
+    - Computes derived values (charts, summaries)
+    - Handles loading and error states
+  </Tab>
+  
+  <Tab title="Implementation">
+    ```jsx src/hooks/useDashboardData.js
+    export function useDashboardData() {
+      const [loading, setLoading] = useState(true)
+      const [error, setError] = useState('')
+      const [globalData, setGlobalData] = useState(null)
+      const [markets, setMarkets] = useState([])
+      const [primaryPortfolio, setPrimaryPortfolio] = useState(null)
+
+      useEffect(() => {
+        let isMounted = true
+
+        async function fetchDashboardData() {
+          try {
+            setLoading(true)
+            setError('')
+
+            const [globalStats, topMarketCoins, btcChart] = await Promise.all([
+              getGlobalStats(),
+              getTopMarketCoins(),
+              getCoinPerformanceChart({ coinId: 'bitcoin', days: 30 }),
+            ])
+
+            if (!isMounted) return
+
+            setGlobalData(globalStats)
+            setMarkets(topMarketCoins)
+            // ... more state updates
+          } catch {
+            if (!isMounted) return
+            setError('Failed to load data')
+          } finally {
+            if (isMounted) setLoading(false)
+          }
+        }
+
+        fetchDashboardData()
+
+        return () => {
+          isMounted = false
+        }
+      }, [])
+
+      return {
+        loading,
+        error,
+        markets,
+        primaryPortfolio,
+        // ... many more computed values
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Usage">
+    ```jsx src/layouts/DashboardLayout.jsx
+    import { useDashboardData } from '../hooks/useDashboardData'
+
+    export default function DashboardLayout() {
+      const dashboardData = useDashboardData()
+
+      return (
+        <div>
+          <TopBar
+            marketCapValue={dashboardData.marketCapValue}
+            marketCapChange={dashboardData.marketCapChange}
+          />
+          <Outlet context={dashboardData} />
+        </div>
+      )
+    }
+    ```
+    
+    Pages can access the data via `useOutletContext()`:
+    
+    ```jsx
+    import { useOutletContext } from 'react-router-dom'
+    
+    function DashboardPage() {
+      const { markets, loading } = useOutletContext()
+      // ... use the data
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  The hook uses a cleanup flag (`isMounted`) to prevent state updates after component unmount. This is crucial for avoiding memory leaks.
+</Warning>
+
+### useChartTooltip
+
+Manages interactive chart tooltip state.
+
+```javascript src/hooks/useChartTooltip.js
+import { useState, useCallback, useRef } from 'react'
+
+/**
+ * Hook for managing chart tooltip interactions
+ * @param {Array} dataPoints - Array of data values to display
+ * @param {Function} formatValue - Function to format the tooltip value
+ * @returns {Object} Tooltip state and handlers
+ */
+export function useChartTooltip(dataPoints = [], formatValue = (v) => v) {
+  const [tooltip, setTooltip] = useState({ 
+    visible: false, x: 0, y: 0, value: null, index: null 
+  })
+  const svgRef = useRef(null)
+
+  const handleMouseMove = useCallback(
+    (event) => {
+      if (!svgRef.current || !dataPoints.length) return
+
+      const svg = svgRef.current
+      const rect = svg.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const relativeX = x / rect.width
+
+      const index = Math.round(relativeX * (dataPoints.length - 1))
+      const clampedIndex = Math.max(0, Math.min(dataPoints.length - 1, index))
+      const value = dataPoints[clampedIndex]
+
+      setTooltip({
+        visible: true,
+        x: x,
+        y: rect.height / 2,
+        value: formatValue(value),
+        index: clampedIndex,
+      })
+    },
+    [dataPoints, formatValue]
+  )
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltip({ visible: false, x: 0, y: 0, value: null, index: null })
+  }, [])
+
+  return {
+    tooltip,
+    svgRef,
+    handleMouseMove,
+    handleMouseLeave,
+  }
+}
+```
+
+**Usage Example:**
+
+```jsx
+const { tooltip, svgRef, handleMouseMove, handleMouseLeave } = 
+  useChartTooltip(chartData, formatPrice)
+
+return (
+  <svg 
+    ref={svgRef}
+    onMouseMove={handleMouseMove}
+    onMouseLeave={handleMouseLeave}
+  >
+    {/* chart content */}
+    {tooltip.visible && (
+      <text x={tooltip.x} y={tooltip.y}>
+        {tooltip.value}
+      </text>
+    )}
+  </svg>
+)
+```
+
+### useTranslations
+
+Provides internationalization support.
+
+```javascript src/hooks/useTranslations.js
+import { useSettings } from '../contexts/SettingsContext'
+import { translations } from '../i18n/translations'
+
+export function useTranslations() {
+  const { language } = useSettings()
+  return translations[language] || translations.en
+}
+```
+
+**Usage:**
+
+```jsx
+const t = useTranslations()
+
+return <h1>{t.dashboard.title}</h1>
+```
+
+### useDocumentTitle
+
+Dynamically updates page title and meta description.
+
+```javascript src/hooks/useDocumentTitle.js
+import { useEffect } from 'react'
+
+/**
+ * Hook to update the document title and meta description dynamically
+ * @param {string} title - The page title (will be appended to "CryptoDash")
+ * @param {string} description - Optional meta description for the page
+ */
+export function useDocumentTitle(title, description) {
+  useEffect(() => {
+    const previousTitle = document.title
+    
+    if (title) {
+      document.title = `${title} | CryptoDash`
+    } else {
+      document.title = 'CryptoDash'
+    }
+
+    // Handle meta description updates...
+
+    return () => {
+      document.title = previousTitle
+      // Restore previous description
+    }
+  }, [title, description])
+}
+```
+
+## Provider Hierarchy
+
+Providers are nested in `src/main.jsx`:
+
+<Steps>
+  <Step title="StrictMode">
+    Enables additional development checks
+  </Step>
+  
+  <Step title="SettingsProvider">
+    Provides theme and language settings
+  </Step>
+  
+  <Step title="ToastProvider">
+    Provides toast notification system
+  </Step>
+  
+  <Step title="App (Router)">
+    Main application with routing
+  </Step>
+</Steps>
+
+```jsx src/main.jsx
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <SettingsProvider>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </SettingsProvider>
+  </StrictMode>,
+)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Context Usage">
+    - Only use Context for truly global state
+    - Keep contexts focused (separate concerns)
+    - Provide custom hooks (`useSettings`, `useToast`) for better DX
+    - Throw errors if hooks are used outside providers
+  </Accordion>
+  
+  <Accordion title="Custom Hooks">
+    - Start hook names with `use`
+    - Return objects for multiple values (better than arrays)
+    - Use `useCallback` and `useMemo` to prevent unnecessary re-renders
+    - Document hook parameters and return values
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Use cleanup functions in `useEffect` to prevent memory leaks
+    - Implement the `isMounted` pattern for async operations
+    - Memoize expensive computations with `useMemo`
+    - Memoize callbacks passed to children with `useCallback`
+  </Accordion>
+</AccordionGroup>
+
+## Common Patterns
+
+### Data Fetching Pattern
+
+```jsx
+function useDataFetching() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const result = await api.getData()
+        if (isMounted) {
+          setData(result)
+          setError(null)
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  return { data, loading, error }
+}
+```
+
+### LocalStorage Sync Pattern
+
+```jsx
+const [value, setValue] = useState(() => {
+  const saved = localStorage.getItem('key')
+  return saved || 'default'
+})
+
+useEffect(() => {
+  localStorage.setItem('key', value)
+}, [value])
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Integration" icon="plug" href="/development/api-integration">
+    Learn how data is fetched from CoinGecko
+  </Card>
+  
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the codebase organization
+  </Card>
+</CardGroup>

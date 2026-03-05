@@ -1,0 +1,162 @@
+---
+title: Introduction to CryptoDash
+description: A modern, feature-rich cryptocurrency portfolio tracker with real-time market data, interactive charts, and comprehensive portfolio management.
+---
+
+## Welcome to CryptoDash
+
+CryptoDash is a professional-grade cryptocurrency dashboard application that provides real-time market insights, portfolio tracking, and comprehensive crypto analysis. Built with modern web technologies and designed with a focus on user experience, performance, and responsive design.
+
+<Note>
+  CryptoDash is a **frontend-only** application that leverages the CoinGecko API for real-time cryptocurrency data. No backend server is required.
+</Note>
+
+## Key Features
+
+CryptoDash offers a comprehensive suite of features for tracking and analyzing cryptocurrency markets:
+
+<CardGroup cols={2}>
+  <Card title="Real-time Data" icon="chart-line">
+    Live cryptocurrency prices and market data from CoinGecko API with automatic updates
+  </Card>
+  <Card title="Portfolio Management" icon="wallet">
+    Track your crypto holdings with detailed analytics, performance charts, and allocation insights
+  </Card>
+  <Card title="Interactive Charts" icon="chart-area">
+    Hover-enabled charts with tooltips showing exact values and performance metrics
+  </Card>
+  <Card title="Market Explorer" icon="magnifying-glass-chart">
+    Browse 2,500+ cryptocurrencies with advanced filters and real-time search
+  </Card>
+</CardGroup>
+
+## What Makes CryptoDash Special?
+
+### Modern Architecture
+
+CryptoDash is built using the latest React patterns and best practices:
+
+- **React 19** with hooks and Context API for state management
+- **Vite** for lightning-fast development and optimized builds
+- **React Router 7** for seamless client-side navigation
+- **TailwindCSS 4** for utility-first styling with dark mode support
+
+### User Experience First
+
+<Steps>
+  <Step title="Responsive Design">
+    Mobile-first approach that works beautifully on all devices, from phones to desktops
+  </Step>
+  <Step title="Dark/Light Mode">
+    Elegant theme switching with smooth transitions and persistent user preferences
+  </Step>
+  <Step title="Bilingual Support">
+    Full English and Spanish translations throughout the application
+  </Step>
+  <Step title="Loading States">
+    Animated skeleton loaders instead of loading spinners for better UX
+  </Step>
+</Steps>
+
+### Rich Feature Set
+
+#### Dashboard Overview
+
+- **4 Summary Cards**: Total Balance, 24h Change, Profit/Loss, Total Assets
+- **Performance Chart**: Interactive Bitcoin price chart with hover tooltips
+- **Market Table**: Top cryptocurrencies with real-time prices and 7-day sparklines
+- **Responsive Grid Layout**: Adapts from mobile to desktop
+
+#### Portfolio Management
+
+- Monitor cryptocurrency holdings in real-time
+- 30-day portfolio performance visualization
+- Asset distribution and strongest performers
+- CSV export with proper formatting
+- Dynamic asset addition and removal
+
+#### Market Explorer
+
+- Browse 2,500+ cryptocurrencies with comprehensive coverage
+- Filter by market cap, volume, and 24h change
+- Instant search across all assets
+- Detailed asset preview with side drawer
+- Global market statistics and trends
+
+#### Analysis Tools
+
+- Volatility metrics and risk analysis
+- Multi-asset performance comparison
+- Historical price trends and data
+- Statistical insights and analytics
+
+#### Transaction Management
+
+- Complete transaction history (buys, sells, transfers)
+- Advanced filtering by type, status, asset, and date range
+- Quick search functionality
+- CSV export capabilities
+- Detailed transaction view modal
+
+## Technology Stack
+
+CryptoDash leverages modern web technologies:
+
+<CodeGroup>
+```json package.json (Core Dependencies)
+{
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.0",
+    "axios": "^1.13.5",
+    "tailwindcss": "^4.2.0"
+  }
+}
+```
+
+```javascript vite.config.js (Build Configuration)
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+</CodeGroup>
+
+### API Integration
+
+CryptoDash uses the **CoinGecko API** (free tier) for real-time cryptocurrency data:
+
+- Market data for top cryptocurrencies via `/coins/markets`
+- Historical price data for charts via `/coins/{id}/market_chart`
+- Global market statistics via `/global`
+- Support for 2,500+ cryptocurrencies
+- No API key required for basic usage (10-50 calls/minute)
+
+<Tip>
+  CryptoDash implements request optimization and caching to stay within rate limits while providing a smooth user experience.
+</Tip>
+
+## Browser Compatibility
+
+CryptoDash supports all modern browsers:
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+- Mobile browsers (iOS Safari, Chrome Mobile)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get started by installing CryptoDash on your local machine
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Learn how to run CryptoDash and explore its features
+  </Card>
+</CardGroup>

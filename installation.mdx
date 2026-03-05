@@ -1,0 +1,273 @@
+---
+title: Installation Guide
+description: Step-by-step guide to install and set up CryptoDash on your local development environment.
+---
+
+## Prerequisites
+
+Before installing CryptoDash, ensure you have the following installed on your system:
+
+<CardGroup cols={2}>
+  <Card title="Node.js 16+" icon="node-js">
+    JavaScript runtime required to run CryptoDash
+  </Card>
+  <Card title="Package Manager" icon="box">
+    npm, yarn, or pnpm for dependency management
+  </Card>
+  <Card title="Git" icon="git-alt">
+    Version control system for cloning the repository
+  </Card>
+  <Card title="Modern Browser" icon="browser">
+    Chrome, Firefox, Safari, or Edge (latest version)
+  </Card>
+</CardGroup>
+
+### Verifying Prerequisites
+
+Check if Node.js and npm are installed:
+
+```bash Terminal
+node --version
+# Should output: v16.0.0 or higher
+
+npm --version
+# Should output: 7.0.0 or higher
+```
+
+<Note>
+  If Node.js is not installed, download it from [nodejs.org](https://nodejs.org/). The LTS version is recommended.
+</Note>
+
+## Installation Steps
+
+Follow these steps to install CryptoDash on your local machine:
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the CryptoDash repository from GitHub:
+
+    ```bash Terminal
+    git clone https://github.com/yourusername/crypto-dash.git
+    cd crypto-dash
+    ```
+
+    This creates a local copy of the project in a `crypto-dash` directory.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
+
+    ```bash yarn
+    yarn install
+    ```
+
+    ```bash pnpm
+    pnpm install
+    ```
+    </CodeGroup>
+
+    This will install all dependencies listed in `package.json`, including:
+    - React 19 and React DOM
+    - React Router 7 for routing
+    - Axios for API calls
+    - TailwindCSS 4 for styling
+    - Vite for development and build tooling
+  </Step>
+
+  <Step title="Configure Environment (Optional)">
+    CryptoDash works out-of-the-box with the CoinGecko free API. However, you can customize API settings by creating a `.env` file:
+
+    ```bash .env
+    # Optional: CoinGecko API Configuration
+    VITE_COINGECKO_BASE_URL=https://api.coingecko.com/api/v3
+    VITE_API_TIMEOUT=10000
+
+    # Optional: CoinGecko Pro API Key (for higher rate limits)
+    VITE_COINGECKO_API_KEY=your_api_key_here
+    ```
+
+    <Tip>
+      Environment variables must be prefixed with `VITE_` to be accessible in the application.
+    </Tip>
+  </Step>
+
+  <Step title="Start Development Server">
+    Launch the development server:
+
+    <CodeGroup>
+    ```bash npm
+    npm run dev
+    ```
+
+    ```bash yarn
+    yarn dev
+    ```
+
+    ```bash pnpm
+    pnpm dev
+    ```
+    </CodeGroup>
+
+    You should see output similar to:
+
+    ```bash Output
+    VITE v7.3.1  ready in 324 ms
+
+    ➜  Local:   http://localhost:5173/
+    ➜  Network: use --host to expose
+    ➜  press h + enter to show help
+    ```
+  </Step>
+
+  <Step title="Open in Browser">
+    Navigate to `http://localhost:5173` in your web browser. You should see the CryptoDash login or dashboard screen.
+
+    <Note>
+      The development server includes hot module replacement (HMR), so changes to your code will automatically refresh the browser.
+    </Note>
+  </Step>
+</Steps>
+
+## Build for Production
+
+To create an optimized production build:
+
+<Steps>
+  <Step title="Build the Application">
+    Create a production-ready build:
+
+    <CodeGroup>
+    ```bash npm
+    npm run build
+    ```
+
+    ```bash yarn
+    yarn build
+    ```
+
+    ```bash pnpm
+    pnpm build
+    ```
+    </CodeGroup>
+
+    This creates an optimized build in the `dist/` directory with:
+    - Minified JavaScript and CSS
+    - Code splitting for optimal performance
+    - Optimized assets and images
+    - Source maps for debugging
+  </Step>
+
+  <Step title="Preview Production Build">
+    Test the production build locally:
+
+    <CodeGroup>
+    ```bash npm
+    npm run preview
+    ```
+
+    ```bash yarn
+    yarn preview
+    ```
+
+    ```bash pnpm
+    pnpm preview
+    ```
+    </CodeGroup>
+
+    This starts a local server to preview the production build at `http://localhost:4173`.
+  </Step>
+</Steps>
+
+## Project Structure
+
+After installation, your project directory will look like this:
+
+```
+crypto-dash/
+├── public/                 # Static assets
+├── src/
+│   ├── api/               # API integration layer
+│   │   ├── axios.js       # Axios instance configuration
+│   │   ├── dashboard/     # Dashboard API calls
+│   │   ├── market/        # Market data API
+│   │   └── portfolio/     # Portfolio API
+│   ├── components/        # React components
+│   │   ├── common/        # Reusable components
+│   │   ├── dashboard/     # Dashboard-specific components
+│   │   ├── layout/        # Layout components (Sidebar, TopBar)
+│   │   ├── market/        # Market explorer components
+│   │   ├── portfolio/     # Portfolio components
+│   │   └── transactions/  # Transaction components
+│   ├── contexts/          # React Context providers
+│   │   ├── SettingsContext.jsx  # Theme, language settings
+│   │   └── ToastContext.jsx     # Toast notifications
+│   ├── hooks/             # Custom React hooks
+│   ├── i18n/              # Internationalization
+│   ├── pages/             # Route pages
+│   ├── router/            # Routing configuration
+│   ├── utils/             # Utility functions
+│   └── main.jsx           # App entry point
+├── index.html             # HTML template
+├── package.json           # Dependencies and scripts
+├── vite.config.js         # Vite configuration
+└── tailwind.config.js     # Tailwind configuration
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 5173 is already in use">
+    If port 5173 is already occupied, Vite will automatically use the next available port. You can also specify a custom port:
+
+    ```bash Terminal
+    npm run dev -- --port 3000
+    ```
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    Delete `node_modules` and reinstall dependencies:
+
+    ```bash Terminal
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="API rate limit errors">
+    CryptoDash uses the CoinGecko free tier which has rate limits (10-50 calls/minute). If you encounter rate limit errors:
+
+    - Wait a few minutes before refreshing
+    - Consider signing up for a CoinGecko Pro API key for higher limits
+    - Add your API key to the `.env` file as `VITE_COINGECKO_API_KEY`
+  </Accordion>
+
+  <Accordion title="Build fails with memory errors">
+    If the build process fails due to memory issues, increase Node.js memory limit:
+
+    ```bash Terminal
+    NODE_OPTIONS="--max-old-space-size=4096" npm run build
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Available Scripts
+
+Here are all the available npm scripts:
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Create optimized production build |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint to check code quality |
+
+## Next Steps
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Now that you have CryptoDash installed, learn how to use its features in the Quick Start guide.
+</Card>

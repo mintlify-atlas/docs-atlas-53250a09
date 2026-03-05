@@ -1,0 +1,355 @@
+---
+title: 'Chart Helpers'
+description: 'Utility functions for chart rendering and data visualization'
+icon: 'chart-line'
+---
+
+Utility functions for processing and rendering chart data, including sparklines and trend visualizations.
+
+## getChartPoints
+
+Converts an array of values into normalized chart points with x/y coordinates.
+
+### Function Signature
+
+```javascript
+getChartPoints(values)
+```
+
+### Parameters
+
+<ParamField path="values" type="Array<number>" required>
+  Array of numeric values to convert into chart points. Minimum 2 values required.
+</ParamField>
+
+### Returns
+
+<ResponseField name="points" type="Array<Object>">
+  Array of point objects, or empty array if input is invalid.
+  
+  Each point object contains:
+  - `x` (number): Horizontal position (0-100)
+  - `y` (number): Vertical position (0-30), normalized to data range
+  - `value` (number): Original data value
+</ResponseField>
+
+### Behavior
+
+- Samples data to maximum 120 points for performance
+- Always includes the last data point
+- Normalizes y-coordinates to 0-30 range based on min/max values
+- Distributes x-coordinates evenly from 0-100
+
+### Usage Examples
+
+```javascript
+import { getChartPoints } from '../utils/dashboardCharts'
+
+const prices = [100, 105, 103, 108, 110]
+const points = getChartPoints(prices)
+
+// Returns:
+// [
+//   { x: 0, y: 30, value: 100 },      // min value at bottom
+//   { x: 25, y: 15, value: 105 },
+//   { x: 50, y: 21, value: 103 },
+//   { x: 75, y: 6, value: 108 },
+//   { x: 100, y: 0, value: 110 }       // max value at top
+// ]
+```
+
+#### Handling Large Datasets
+
+```javascript
+// Large dataset with 1000 points
+const largeDataset = Array.from({ length: 1000 }, (_, i) => 
+  Math.sin(i / 50) * 100 + 1000
+)
+
+const points = getChartPoints(largeDataset)
+// Returns ~120 sampled points + last point
+// console.log(points.length) // 121
+```
+
+#### Edge Cases
+
+```javascript
+getChartPoints([])          // []
+getChartPoints([100])       // []
+getChartPoints([100, 100])  // All points have same y value
+```
+
+---
+
+## getTrendPath
+
+Generates an SVG path string for rendering a trend line.
+
+### Function Signature
+
+```javascript
+getTrendPath(values)
+```
+
+### Parameters
+
+<ParamField path="values" type="Array<number>" required>
+  Array of numeric values representing the trend data.
+</ParamField>
+
+### Returns
+
+<ResponseField name="path" type="string">
+  SVG path string in the format "M x y L x y L x y..." for use in `<path d="...">` elements.
+  
+  Returns "M0 15 L 100 15" (horizontal line) for invalid input.
+</ResponseField>
+
+### Usage Examples
+
+#### Basic Trend Line
+
+```javascript
+import { getTrendPath } from '../utils/dashboardCharts'
+
+const bitcoinPrices = [43000, 43500, 43200, 44000, 44500]
+const path = getTrendPath(bitcoinPrices)
+
+// Returns: "M0.00 30.00 L25.00 18.00 L50.00 22.40 L75.00 6.00 L100.00 0.00"
+
+// Use in SVG:
+<svg viewBox="0 0 100 30">
+  <path d={path} stroke="currentColor" fill="none" />
+</svg>
+```
+
+#### Sparkline Charts
+
+```javascript
+const SparklineChart = ({ data }) => {
+  const path = getTrendPath(data.sparkline_in_7d?.price)
+  
+  return (
+    <svg viewBox="0 0 100 30" className="w-24 h-8">
+      <path
+        d={path}
+        stroke="#2bee79"
+        strokeWidth="2"
+        fill="none"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
+}
+```
+
+#### Dashboard Performance Charts
+
+```javascript
+import { getTrendPath } from '../utils/dashboardCharts'
+
+// Portfolio performance over 7 days
+const portfolioSeries = [10000, 10200, 10100, 10500, 10800, 10600, 11000]
+const portfolioPath = getTrendPath(portfolioSeries)
+
+// BTC performance for comparison
+const btcSeries = [43000, 43500, 43200, 44000, 44500, 44200, 45000]
+const btcPath = getTrendPath(btcSeries)
+```
+
+---
+
+## getCoinIcon
+
+Returns icon configuration for cryptocurrency symbols.
+
+### Function Signature
+
+```javascript
+getCoinIcon(symbol)
+```
+
+### Parameters
+
+<ParamField path="symbol" type="string" required>
+  Cryptocurrency symbol (e.g., "BTC", "ETH", "SOL"). Case-insensitive.
+</ParamField>
+
+### Returns
+
+<ResponseField name="config" type="Object">
+  Icon configuration object with Material Icons styling.
+  
+  Properties:
+  - `icon` (string): Material Icon name
+  - `iconBg` (string): Background color class
+  - `iconColor` (string): Text color class
+</ResponseField>
+
+### Supported Cryptocurrencies
+
+| Symbol | Icon | Colors |
+|--------|------|--------|
+| BTC | currency_bitcoin | Orange |
+| ETH | eco | Indigo |
+| SOL | bolt | Cyan |
+| BNB | diamond | Yellow |
+| Others | token | Gray |
+
+### Usage Examples
+
+#### Basic Icon Rendering
+
+```javascript
+import { getCoinIcon } from '../utils/dashboardCharts'
+
+const { icon, iconBg, iconColor } = getCoinIcon('BTC')
+
+// Returns:
+// {
+//   icon: 'currency_bitcoin',
+//   iconBg: 'bg-orange-500/20',
+//   iconColor: 'text-orange-500'
+// }
+```
+
+#### In React Components
+
+```javascript
+const CoinBadge = ({ symbol }) => {
+  const { icon, iconBg, iconColor } = getCoinIcon(symbol)
+  
+  return (
+    <div className={`flex items-center gap-2 rounded-lg p-2 ${iconBg}`}>
+      <span className={`material-icons ${iconColor}`}>
+        {icon}
+      </span>
+      <span>{symbol}</span>
+    </div>
+  )
+}
+
+// Usage:
+<CoinBadge symbol="BTC" />  // Orange bitcoin icon
+<CoinBadge symbol="ETH" />  // Indigo eco icon
+<CoinBadge symbol="DOGE" /> // Gray token icon (fallback)
+```
+
+#### Portfolio Assets Table
+
+```javascript
+import { getCoinIcon } from '../utils/dashboardCharts'
+
+const PortfolioRow = ({ asset }) => {
+  const iconData = getCoinIcon(asset.symbol)
+  
+  return (
+    <tr>
+      <td>
+        <div className={`rounded-full p-2 ${iconData.iconBg}`}>
+          <span className={`material-icons text-xl ${iconData.iconColor}`}>
+            {iconData.icon}
+          </span>
+        </div>
+      </td>
+      <td>{asset.name}</td>
+    </tr>
+  )
+}
+```
+
+#### Case Insensitivity
+
+```javascript
+getCoinIcon('btc')   // Same as 'BTC'
+getCoinIcon('BTC')   // Same as 'btc'
+getCoinIcon('Btc')   // Same as 'BTC'
+getCoinIcon(null)    // Returns default token icon
+getCoinIcon('')      // Returns default token icon
+```
+
+---
+
+## Real-World Integration
+
+### Dashboard Card with Trend
+
+```javascript
+import { getTrendPath, getCoinIcon } from '../utils/dashboardCharts'
+import { formatPrice, formatSignedPercent } from '../utils/dashboardFormatters'
+
+const CryptoCard = ({ coin }) => {
+  const path = getTrendPath(coin.sparkline_in_7d?.price)
+  const { icon, iconBg, iconColor } = getCoinIcon(coin.symbol)
+  
+  return (
+    <div className="rounded-lg bg-white p-4 shadow">
+      <div className="flex items-center gap-3">
+        <div className={`rounded-full p-2 ${iconBg}`}>
+          <span className={`material-icons ${iconColor}`}>{icon}</span>
+        </div>
+        <div>
+          <h3>{coin.name}</h3>
+          <p className="text-2xl font-bold">
+            {formatPrice(coin.current_price)}
+          </p>
+          <p className={coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'}>
+            {formatSignedPercent(coin.price_change_percentage_24h)}
+          </p>
+        </div>
+      </div>
+      <svg viewBox="0 0 100 30" className="mt-4 w-full">
+        <path
+          d={path}
+          stroke={coin.price_change_percentage_24h >= 0 ? '#2bee79' : '#ef4444'}
+          strokeWidth="2"
+          fill="none"
+        />
+      </svg>
+    </div>
+  )
+}
+```
+
+### Performance Comparison Chart
+
+```javascript
+import { getTrendPath } from '../utils/dashboardCharts'
+
+const ComparisonChart = ({ portfolioData, btcData }) => {
+  const portfolioPath = getTrendPath(portfolioData)
+  const btcPath = getTrendPath(btcData)
+  
+  return (
+    <svg viewBox="0 0 100 30" className="w-full h-32">
+      <path
+        d={portfolioPath}
+        stroke="#2bee79"
+        strokeWidth="2"
+        fill="none"
+      />
+      <path
+        d={btcPath}
+        stroke="#f59e0b"
+        strokeWidth="2"
+        fill="none"
+        strokeDasharray="4 2"
+      />
+    </svg>
+  )
+}
+```
+
+## Technical Notes
+
+<Info>
+  **Performance Optimization**: `getChartPoints` automatically samples large datasets to a maximum of 120 points, ensuring smooth rendering even with thousands of data points.
+</Info>
+
+<Note>
+  **SVG Coordinate System**: The y-axis is inverted in SVG (0 at top, 30 at bottom), so higher values appear at the top of the chart (lower y-coordinates).
+</Note>
+
+<Tip>
+  **Material Icons Required**: The `getCoinIcon` function returns Material Icon names. Ensure Material Icons are loaded in your application for proper rendering.
+</Tip>

@@ -1,0 +1,324 @@
+---
+title: 'Portfolio API'
+description: 'Portfolio management and asset tracking functions'
+---
+
+## Overview
+
+The Portfolio API provides functions for managing cryptocurrency portfolios in the browser's localStorage. It handles portfolio creation, asset management, and position tracking with automatic persistence.
+
+**File location:** `src/api/portfolio/portfolioApi.js`
+
+## Configuration
+
+- **Storage:** Browser localStorage
+- **Storage key:** `crypto_dash_portfolios`
+- **Default allocation:** $2,000 USD per asset
+- **Data format:** JSON array of portfolio objects
+
+## Functions
+
+### getOrCreatePrimaryPortfolio
+
+Retrieves the primary portfolio or creates a new one with default assets if none exists.
+
+```javascript
+import { getOrCreatePrimaryPortfolio } from './api/portfolio/portfolioApi'
+import { getTopMarketCoins } from './api/market/marketApi'
+
+const marketCoins = await getTopMarketCoins({ perPage: 100 })
+const portfolio = getOrCreatePrimaryPortfolio(marketCoins)
+
+console.log('Portfolio:', portfolio.name)
+console.log('Positions:', portfolio.positions.length)
+```
+
+#### Signature
+
+```javascript
+getOrCreatePrimaryPortfolio(marketCoins): Object
+```
+
+#### Parameters
+
+<ParamField path="marketCoins" type="array" default="[]">
+  Array of market coin objects from `getTopMarketCoins()`. Used to initialize default positions with current prices.
+  
+  Each coin should have:
+  - `id` (string) - Coin identifier
+  - `current_price` (number) - Current price in USD
+</ParamField>
+
+#### Returns
+
+<ResponseField name="portfolio" type="object">
+  Portfolio object
+
+  <ResponseField name="id" type="string">
+    Portfolio identifier (e.g., `main`)
+  </ResponseField>
+
+  <ResponseField name="name" type="string">
+    Portfolio display name (e.g., `Portafolio Principal`)
+  </ResponseField>
+
+  <ResponseField name="positions" type="array">
+    Array of asset positions
+
+    <ResponseField name="assetId" type="string">
+      Coin identifier (e.g., `bitcoin`, `ethereum`)
+    </ResponseField>
+
+    <ResponseField name="investedUsd" type="number">
+      Amount invested in USD
+    </ResponseField>
+
+    <ResponseField name="amount" type="number">
+      Quantity of the asset owned (calculated as `investedUsd / currentPrice`)
+    </ResponseField>
+
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of position creation
+    </ResponseField>
+  </ResponseField>
+
+  <ResponseField name="createdAt" type="string">
+    ISO 8601 timestamp of portfolio creation
+  </ResponseField>
+</ResponseField>
+
+#### Default Assets
+
+When creating a new portfolio, the function attempts to add these preferred assets (if available in `marketCoins`):
+
+1. `bitcoin`
+2. `ethereum`
+3. `solana`
+4. `binancecoin`
+5. `ripple`
+
+If fewer than 5 preferred assets are available, it fills remaining slots from the top market coins list.
+
+#### Example Return Value
+
+```json
+{
+  "id": "main",
+  "name": "Portafolio Principal",
+  "positions": [
+    {
+      "assetId": "bitcoin",
+      "investedUsd": 2000,
+      "amount": 0.04444,
+      "createdAt": "2026-03-05T18:30:00.000Z"
+    },
+    {
+      "assetId": "ethereum",
+      "investedUsd": 2000,
+      "amount": 0.8,
+      "createdAt": "2026-03-05T18:30:00.000Z"
+    }
+  ],
+  "createdAt": "2026-03-05T18:30:00.000Z"
+}
+```
+
+### addAssetToPrimaryPortfolio
+
+Adds a new asset position to the primary portfolio.
+
+```javascript
+import { addAssetToPrimaryPortfolio } from './api/portfolio/portfolioApi'
+
+const updatedPortfolio = addAssetToPrimaryPortfolio({
+  assetId: 'cardano',
+  currentPrice: 0.75,
+  allocationUsd: 1500
+})
+
+if (updatedPortfolio) {
+  console.log('Asset added successfully')
+} else {
+  console.log('No portfolio exists or asset already in portfolio')
+}
+```
+
+#### Signature
+
+```javascript
+addAssetToPrimaryPortfolio(options): Object | null
+```
+
+#### Parameters
+
+<ParamField path="assetId" type="string" required>
+  Coin identifier to add (e.g., `cardano`, `polkadot`)
+</ParamField>
+
+<ParamField path="currentPrice" type="number" required>
+  Current price of the asset in USD. Used to calculate the amount of coins purchased.
+</ParamField>
+
+<ParamField path="allocationUsd" type="number" default="2000">
+  Amount to invest in USD. Defaults to `DEFAULT_ALLOCATION_USD` (2000).
+</ParamField>
+
+#### Returns
+
+<ResponseField name="portfolio" type="object | null">
+  Updated portfolio object or `null` if:
+  - No primary portfolio exists
+  - Asset already exists in the portfolio
+
+  Same structure as `getOrCreatePrimaryPortfolio()` return value.
+</ResponseField>
+
+#### Behavior
+
+- **Duplicate check:** Returns existing portfolio unchanged if asset already exists
+- **Persistence:** Automatically saves to localStorage
+- **Amount calculation:** `amount = allocationUsd / currentPrice`
+- **Safe defaults:** Uses fallback values if price or allocation are invalid
+
+### getDefaultAllocationUsd
+
+Returns the default USD allocation amount used when adding assets.
+
+```javascript
+import { getDefaultAllocationUsd } from './api/portfolio/portfolioApi'
+
+const defaultAmount = getDefaultAllocationUsd()
+console.log('Default allocation:', defaultAmount) // 2000
+```
+
+#### Signature
+
+```javascript
+getDefaultAllocationUsd(): number
+```
+
+#### Returns
+
+<ResponseField name="allocation" type="number">
+  Default allocation amount in USD (2000)
+</ResponseField>
+
+## Data Storage
+
+### Storage Format
+
+Portfolios are stored in localStorage as a JSON array:
+
+```json
+[
+  {
+    "id": "main",
+    "name": "Portafolio Principal",
+    "positions": [
+      {
+        "assetId": "bitcoin",
+        "investedUsd": 2000,
+        "amount": 0.04444,
+        "createdAt": "2026-03-05T18:30:00.000Z"
+      }
+    ],
+    "createdAt": "2026-03-05T18:30:00.000Z"
+  }
+]
+```
+
+### Storage Key
+
+```javascript
+const PORTFOLIO_STORAGE_KEY = 'crypto_dash_portfolios'
+```
+
+### Error Handling
+
+The API handles storage errors gracefully:
+
+- **Invalid JSON:** Returns empty array `[]`
+- **Missing data:** Returns empty array `[]`
+- **Non-array data:** Returns empty array `[]`
+
+```javascript
+// Safe parsing with error recovery
+function safeParsePortfolios(rawValue) {
+  try {
+    const parsed = JSON.parse(rawValue)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+```
+
+## Implementation Details
+
+### Position Calculation
+
+When creating or adding a position, the amount of coins is calculated as:
+
+```javascript
+const amount = allocationUsd / currentPrice
+```
+
+Example:
+- Allocation: $2,000 USD
+- Bitcoin price: $45,000
+- Amount: 2000 / 45000 = 0.04444 BTC
+
+### Timestamp Format
+
+All timestamps use ISO 8601 format:
+
+```javascript
+const timestamp = new Date().toISOString()
+// "2026-03-05T18:30:00.000Z"
+```
+
+### Primary Portfolio
+
+The application currently supports a single primary portfolio:
+
+- Always stored at index 0 in the portfolios array
+- ID: `main`
+- Name: `Portafolio Principal`
+
+## Complete Example
+
+```javascript
+import { 
+  getOrCreatePrimaryPortfolio, 
+  addAssetToPrimaryPortfolio,
+  getDefaultAllocationUsd 
+} from './api/portfolio/portfolioApi'
+import { getTopMarketCoins } from './api/market/marketApi'
+
+// Initialize portfolio with market data
+const marketCoins = await getTopMarketCoins({ perPage: 100 })
+const portfolio = getOrCreatePrimaryPortfolio(marketCoins)
+
+console.log('Initial positions:', portfolio.positions.length)
+
+// Add a new asset
+const cardano = marketCoins.find(coin => coin.id === 'cardano')
+if (cardano) {
+  const updated = addAssetToPrimaryPortfolio({
+    assetId: 'cardano',
+    currentPrice: cardano.current_price,
+    allocationUsd: getDefaultAllocationUsd()
+  })
+  
+  console.log('Updated positions:', updated?.positions.length)
+}
+
+// Calculate portfolio value
+const portfolioValue = portfolio.positions.reduce((total, position) => {
+  const coin = marketCoins.find(c => c.id === position.assetId)
+  const currentValue = position.amount * (coin?.current_price || 0)
+  return total + currentValue
+}, 0)
+
+console.log('Portfolio value:', portfolioValue)
+```

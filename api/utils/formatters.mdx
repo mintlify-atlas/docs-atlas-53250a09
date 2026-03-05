@@ -1,0 +1,235 @@
+---
+title: 'Formatters'
+description: 'Currency and percentage formatting utilities'
+icon: 'dollar-sign'
+---
+
+Utility functions for formatting currency values and percentages consistently across the application.
+
+## formatCurrency
+
+Formats a numeric value as USD currency with 2 decimal places.
+
+### Function Signature
+
+```javascript
+formatCurrency(value)
+```
+
+### Parameters
+
+<ParamField path="value" type="number">
+  The numeric value to format as currency. Can be a number, numeric string, `null`, or `undefined`.
+</ParamField>
+
+### Returns
+
+<ResponseField name="formatted" type="string">
+  The formatted currency string (e.g., "$1,234.56") or "--" for invalid values.
+</ResponseField>
+
+### Usage Examples
+
+```javascript
+import { formatCurrency } from '../utils/dashboardFormatters'
+
+formatCurrency(1234.56)      // "$1,234.56"
+formatCurrency(1000000)      // "$1,000,000.00"
+formatCurrency(42.5)         // "$42.50"
+formatCurrency(null)         // "--"
+formatCurrency(undefined)    // "--"
+formatCurrency(NaN)          // "--"
+```
+
+---
+
+## formatCompactCurrency
+
+Formats large currency values using compact notation (K, M, B, T).
+
+### Function Signature
+
+```javascript
+formatCompactCurrency(value)
+```
+
+### Parameters
+
+<ParamField path="value" type="number">
+  The numeric value to format. Ideal for large numbers like market caps or volumes.
+</ParamField>
+
+### Returns
+
+<ResponseField name="formatted" type="string">
+  The formatted currency string with compact notation (e.g., "$1.23M") or "--" for invalid values.
+</ResponseField>
+
+### Usage Examples
+
+```javascript
+import { formatCompactCurrency } from '../utils/dashboardFormatters'
+
+formatCompactCurrency(1500)           // "$1.5K"
+formatCompactCurrency(1500000)        // "$1.5M"
+formatCompactCurrency(1500000000)     // "$1.5B"
+formatCompactCurrency(1500000000000)  // "$1.5T"
+formatCompactCurrency(42.5)           // "$42.50"
+formatCompactCurrency(null)           // "--"
+```
+
+---
+
+## formatPrice
+
+Formats cryptocurrency prices with appropriate precision based on value magnitude.
+
+### Function Signature
+
+```javascript
+formatPrice(value)
+```
+
+### Parameters
+
+<ParamField path="value" type="number">
+  The price value to format. Uses different precision for values above and below $1.
+</ParamField>
+
+### Returns
+
+<ResponseField name="formatted" type="string">
+  - For values >= $1: Standard currency format with 2 decimals
+  - For values < $1: Dollar sign with 6 decimal places
+  - For invalid values: "--"
+</ResponseField>
+
+### Usage Examples
+
+```javascript
+import { formatPrice } from '../utils/dashboardFormatters'
+
+formatPrice(43500)      // "$43,500.00" (BTC price)
+formatPrice(2800)       // "$2,800.00" (ETH price)
+formatPrice(0.000123)   // "$0.000123" (small altcoin)
+formatPrice(0.5)        // "$0.500000"
+formatPrice(null)       // "--"
+```
+
+<Info>
+  This function is specifically designed for cryptocurrency prices, which can range from thousands of dollars to fractions of a cent.
+</Info>
+
+---
+
+## formatSignedPercent
+
+Formats percentage changes with explicit +/- signs.
+
+### Function Signature
+
+```javascript
+formatSignedPercent(value)
+```
+
+### Parameters
+
+<ParamField path="value" type="number">
+  The percentage value to format (e.g., 5.2 for 5.2%).
+</ParamField>
+
+### Returns
+
+<ResponseField name="formatted" type="string">
+  The formatted percentage with explicit sign (e.g., "+5.20%" or "-2.34%") or "--" for invalid values.
+</ResponseField>
+
+### Usage Examples
+
+```javascript
+import { formatSignedPercent } from '../utils/dashboardFormatters'
+
+formatSignedPercent(5.2)      // "+5.20%"
+formatSignedPercent(-3.45)    // "-3.45%"
+formatSignedPercent(0)        // "+0.00%"
+formatSignedPercent(null)     // "--"
+formatSignedPercent(NaN)      // "--"
+```
+
+<Note>
+  The sign is always displayed, even for positive values. Zero is displayed with a "+" sign.
+</Note>
+
+---
+
+## Real-World Usage
+
+### In Dashboard Components
+
+```javascript
+import { 
+  formatCurrency, 
+  formatCompactCurrency, 
+  formatSignedPercent 
+} from '../utils/dashboardFormatters'
+
+// Portfolio summary
+const portfolioValue = formatCurrency(portfolioSummary.totalValueUsd)
+const dailyChange = formatCompactCurrency(portfolioSummary.change24hUsd)
+const percentChange = formatSignedPercent(portfolioSummary.change24hPercent)
+
+// Display: "$125,430.50" "$2.5K" "+3.45%"
+```
+
+### In Market Data Tables
+
+```javascript
+import { formatPrice, formatCompactCurrency } from '../utils/dashboardFormatters'
+
+// Market table row
+coins.map(coin => ({
+  price: formatPrice(coin.current_price),
+  marketCap: formatCompactCurrency(coin.market_cap),
+  volume: formatCompactCurrency(coin.total_volume)
+}))
+
+// BTC: "$43,500.00" "$850B" "$25B"
+// SHIB: "$0.000008" "$4.5B" "$150M"
+```
+
+### In Transaction Details
+
+```javascript
+import { formatCurrency } from '../utils/dashboardFormatters'
+
+const transaction = {
+  priceUsd: formatCurrency(tx.priceUsd),      // "$43,500.00"
+  feeUsd: formatCurrency(tx.feeUsd),          // "$2.50"
+  totalUsd: formatCurrency(tx.totalUsd)       // "$43,502.50"
+}
+```
+
+## Implementation Details
+
+All formatters use the `Intl.NumberFormat` API for consistent, locale-aware formatting:
+
+```javascript
+// Standard currency formatter
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+})
+
+// Compact notation formatter
+const compactUsdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  notation: 'compact',
+  maximumFractionDigits: 2,
+})
+```
+
+<Tip>
+  These formatters are optimized for cryptocurrency applications where values can range from billions of dollars to fractions of a cent.
+</Tip>

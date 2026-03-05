@@ -1,0 +1,285 @@
+---
+title: 'ToastContext'
+description: 'React context for displaying toast notifications throughout the application'
+---
+
+## Overview
+
+The `ToastContext` provides a centralized notification system for displaying toast messages to users. It supports multiple toast types (success, error, warning, info) with automatic dismissal and queue management.
+
+## Components
+
+### ToastProvider
+
+The context provider component that manages toast state and provides notification functions.
+
+<ParamField path="children" type="React.ReactNode" required>
+  The child components that will have access to the toast context
+</ParamField>
+
+#### Example: App Setup
+
+```jsx
+import { ToastProvider } from './contexts/ToastContext'
+import { SettingsProvider } from './contexts/SettingsContext'
+import App from './App'
+
+function Root() {
+  return (
+    <SettingsProvider>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </SettingsProvider>
+  )
+}
+```
+
+## Hook API
+
+### useToast
+
+A custom hook that provides access to toast notification functions. Must be used within a `ToastProvider`.
+
+**Returns:** Toast context object with the following properties:
+
+<ParamField path="toasts" type="Array<Toast>">
+  Array of currently active toast objects. Each toast has `id`, `message`, `type`, and `duration` properties
+</ParamField>
+
+<ParamField path="addToast" type="(message: string, type?: string, duration?: number) => number">
+  General function to add a toast notification
+  
+  **Parameters:**
+  - `message` (string, required): The toast message to display
+  - `type` (string, optional): Toast type - 'success', 'error', 'warning', or 'info'. Defaults to 'info'
+  - `duration` (number, optional): How long to show the toast in milliseconds. Defaults to 3000. Set to 0 for persistent toast
+  
+  **Returns:** Unique toast ID
+</ParamField>
+
+<ParamField path="removeToast" type="(id: number) => void">
+  Manually remove a toast by its ID
+</ParamField>
+
+<ParamField path="success" type="(message: string, duration?: number) => number">
+  Convenience method to show a success toast. Uses green styling with check icon
+</ParamField>
+
+<ParamField path="error" type="(message: string, duration?: number) => number">
+  Convenience method to show an error toast. Uses red styling with error icon
+</ParamField>
+
+<ParamField path="info" type="(message: string, duration?: number) => number">
+  Convenience method to show an info toast. Uses blue styling with info icon
+</ParamField>
+
+<ParamField path="warning" type="(message: string, duration?: number) => number">
+  Convenience method to show a warning toast. Uses yellow styling with warning icon
+</ParamField>
+
+## Usage Examples
+
+### Success Toast
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+
+function SaveButton() {
+  const { success } = useToast()
+  
+  const handleSave = async () => {
+    await saveData()
+    success('Settings saved successfully')
+  }
+  
+  return <button onClick={handleSave}>Save</button>
+}
+```
+
+### Error Toast
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+
+function DataFetcher() {
+  const { error } = useToast()
+  
+  const fetchData = async () => {
+    try {
+      await api.getData()
+    } catch (err) {
+      error('Failed to load data. Please try again.')
+    }
+  }
+  
+  return <button onClick={fetchData}>Load Data</button>
+}
+```
+
+### Custom Duration
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+
+function QuickNotification() {
+  const { info } = useToast()
+  
+  const showQuickMessage = () => {
+    // Show for only 1 second
+    info('Quick message!', 1000)
+  }
+  
+  return <button onClick={showQuickMessage}>Show Quick Toast</button>
+}
+```
+
+### Persistent Toast
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+
+function PersistentWarning() {
+  const { warning, removeToast } = useToast()
+  
+  const showPersistentWarning = () => {
+    // Duration of 0 means it won't auto-dismiss
+    const toastId = warning('Action required: Please verify your email', 0)
+    
+    // Manually remove after user action
+    setTimeout(() => {
+      removeToast(toastId)
+    }, 10000)
+  }
+  
+  return <button onClick={showPersistentWarning}>Show Warning</button>
+}
+```
+
+### All Toast Types
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+
+function ToastDemo() {
+  const { success, error, warning, info } = useToast()
+  
+  return (
+    <div>
+      <button onClick={() => success('Operation successful!')}>Success</button>
+      <button onClick={() => error('Something went wrong')}>Error</button>
+      <button onClick={() => warning('Please be careful')}>Warning</button>
+      <button onClick={() => info('Here is some information')}>Info</button>
+    </div>
+  )
+}
+```
+
+### Real-World Example: Form Submission
+
+```jsx
+import { useToast } from '../contexts/ToastContext'
+import { useSettings } from '../contexts/SettingsContext'
+
+function SettingsForm() {
+  const { toggleTheme, toggleLanguage } = useSettings()
+  const { success } = useToast()
+  
+  const handleThemeChange = () => {
+    toggleTheme()
+    success('Theme changed successfully')
+  }
+  
+  const handleLanguageChange = () => {
+    toggleLanguage()
+    success('Language updated')
+  }
+  
+  return (
+    <div>
+      <button onClick={handleThemeChange}>Toggle Theme</button>
+      <button onClick={handleLanguageChange}>Toggle Language</button>
+    </div>
+  )
+}
+```
+
+## Toast Object Structure
+
+Each toast in the `toasts` array has the following structure:
+
+```typescript
+interface Toast {
+  id: number          // Unique identifier (timestamp)
+  message: string     // Toast message text
+  type: string        // 'success' | 'error' | 'warning' | 'info'
+  duration: number    // Auto-dismiss duration in milliseconds
+}
+```
+
+## Displaying Toasts
+
+To actually render toasts on screen, use the `ToastContainer` component:
+
+```jsx
+import ToastContainer from './components/common/ToastContainer'
+
+function App() {
+  return (
+    <div>
+      {/* Your app content */}
+      <ToastContainer />
+    </div>
+  )
+}
+```
+
+The `ToastContainer` component:
+- Reads toasts from the context using `useToast()`
+- Positions toasts in the bottom-right corner
+- Handles animations (slide in/out)
+- Shows a progress bar for auto-dismissing toasts
+- Pauses auto-dismiss on hover
+- Provides close buttons for manual dismissal
+
+## Features
+
+### Automatic Queue Management
+
+Toasts are automatically added to a queue and displayed in order. Multiple toasts stack vertically.
+
+### Auto-Dismiss
+
+By default, toasts auto-dismiss after 3 seconds. You can:
+- Customize the duration per toast
+- Set duration to 0 for persistent toasts
+- Manually dismiss using `removeToast(id)`
+
+### Type-Based Styling
+
+Each toast type has distinct styling:
+- **Success**: Green background with check icon
+- **Error**: Red background with error icon
+- **Warning**: Yellow background with warning icon
+- **Info**: Blue background with info icon
+
+### Error Handling
+
+The hook throws an error if used outside of a `ToastProvider`:
+
+```
+Error: useToast must be used within ToastProvider
+```
+
+## Implementation Details
+
+The context uses React hooks internally:
+- `useState` for managing the toasts array
+- `useCallback` for memoized toast functions
+- Unique IDs generated using `Date.now()`
+- Auto-removal via `setTimeout` for time-based dismissal
+
+## Related
+
+- [SettingsContext](/api/context/settings-context) - Often used together for settings changes
+- [ToastContainer Component](/api/components/toast-container) - Required for rendering toasts

@@ -1,0 +1,221 @@
+---
+title: 'useChartTooltip'
+description: 'Custom React hook for managing interactive tooltips on SVG charts with mouse tracking'
+---
+
+## Overview
+
+The `useChartTooltip` hook provides tooltip functionality for SVG-based charts. It tracks mouse position, calculates the nearest data point, and manages tooltip visibility state. The hook is used across performance charts to display formatted values on hover.
+
+## Import
+
+```javascript
+import { useChartTooltip } from '../../hooks/useChartTooltip'
+```
+
+## Signature
+
+```javascript
+function useChartTooltip(
+  dataPoints?: Array<number>,
+  formatValue?: (value: number) => string
+): TooltipState
+```
+
+## Parameters
+
+<ParamField path="dataPoints" type="array" default="[]">
+  Array of numeric data values to display in the tooltip. Represents the y-values of your chart data.
+</ParamField>
+
+<ParamField path="formatValue" type="function" default="(v) => v">
+  Function to format the tooltip value for display. Receives the raw data point value and should return a formatted string.
+  
+  **Common formatters:**
+  - `formatPrice` - For currency values (e.g., "$42,123.45")
+  - `formatCompactCurrency` - For abbreviated values (e.g., "$1.2M")
+  - Custom formatting functions
+</ParamField>
+
+## Return Value
+
+Returns an object with tooltip state and event handlers:
+
+<ResponseField name="tooltip" type="object">
+  Tooltip state object containing:
+  - `visible` (boolean): Whether the tooltip should be displayed
+  - `x` (number): X-coordinate in pixels relative to SVG element
+  - `y` (number): Y-coordinate in pixels relative to SVG element
+  - `value` (string|number): Formatted value to display
+  - `index` (number|null): Index of the data point in the dataPoints array
+</ResponseField>
+
+<ResponseField name="svgRef" type="RefObject">
+  React ref to attach to the SVG element. Required for calculating mouse position.
+</ResponseField>
+
+<ResponseField name="handleMouseMove" type="function">
+  Event handler for mouse move events. Attach to the SVG element's `onMouseMove` prop.
+  
+  Calculates the nearest data point based on mouse position and updates tooltip state.
+</ResponseField>
+
+<ResponseField name="handleMouseLeave" type="function">
+  Event handler for mouse leave events. Attach to the SVG element's `onMouseLeave` prop.
+  
+  Hides the tooltip when the mouse leaves the chart area.
+</ResponseField>
+
+## Usage Example
+
+### Basic Chart with Tooltip
+
+```javascript MainPerformanceChart.jsx:1-7
+import { useTranslations } from '../../hooks/useTranslations'
+import { useChartTooltip } from '../../hooks/useChartTooltip'
+import { formatPrice } from '../../utils/dashboardFormatters'
+
+export default function MainPerformanceChart({ chartPath, chartData = [], priceLabel, changeLabel, positive }) {
+  const t = useTranslations()
+  const { tooltip, svgRef, handleMouseMove, handleMouseLeave } = useChartTooltip(chartData, formatPrice)
+
+  return (
+    <div className="chart-container">
+      <div className="chart-header">
+        <h2>{t.dashboard.performance}</h2>
+        <div className="price-display">
+          {/* Show tooltip value when hovering, otherwise show default price */}
+          <p>{tooltip.visible ? tooltip.value : priceLabel}</p>
+          <p className={positive ? 'positive' : 'negative'}>{changeLabel}</p>
+        </div>
+      </div>
+
+      <svg 
+        ref={svgRef}
+        className="chart-svg" 
+        viewBox="0 0 100 30" 
+        preserveAspectRatio="none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ cursor: 'crosshair' }}
+      >
+        {/* Chart path */}
+        <path
+          d={chartPath}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+        />
+        
+        {/* Tooltip indicator */}
+        {tooltip.visible && tooltip.index !== null && (
+          <>
+            {/* Vertical line at hover point */}
+            <line
+              x1={(tooltip.index / (chartData.length - 1)) * 100}
+              y1="0"
+              x2={(tooltip.index / (chartData.length - 1)) * 100}
+              y2="30"
+              stroke="currentColor"
+              strokeWidth="0.5"
+              strokeDasharray="2,2"
+              opacity="0.5"
+            />
+            {/* Dot at data point */}
+            <circle
+              cx={(tooltip.index / (chartData.length - 1)) * 100}
+              cy={30 - ((chartData[tooltip.index] - Math.min(...chartData)) / (Math.max(...chartData) - Math.min(...chartData))) * 30}
+              r="0.8"
+              fill="black"
+            />
+          </>
+        )}
+      </svg>
+    </div>
+  )
+}
+```
+
+### Portfolio Performance Chart
+
+```javascript
+import { useChartTooltip } from '../../hooks/useChartTooltip'
+import { formatCompactCurrency } from '../../utils/dashboardFormatters'
+
+function PortfolioPerformanceChart({ chartData }) {
+  const { tooltip, svgRef, handleMouseMove, handleMouseLeave } = useChartTooltip(
+    chartData,
+    formatCompactCurrency
+  )
+
+  return (
+    <div>
+      {tooltip.visible && (
+        <div className="tooltip-display">
+          Value: {tooltip.value}
+        </div>
+      )}
+      
+      <svg
+        ref={svgRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        viewBox="0 0 100 30"
+      >
+        {/* Chart content */}
+      </svg>
+    </div>
+  )
+}
+```
+
+### Custom Value Formatter
+
+```javascript
+const customFormatter = (value) => {
+  return `${value.toFixed(2)}%`
+}
+
+const { tooltip, svgRef, handleMouseMove, handleMouseLeave } = useChartTooltip(
+  percentageData,
+  customFormatter
+)
+```
+
+## Implementation Details
+
+### Position Calculation
+
+The hook calculates the tooltip position by:
+1. Getting the SVG element's bounding rectangle
+2. Converting mouse coordinates to relative position (0-1 range)
+3. Mapping the relative position to the nearest data point index
+4. Clamping the index to valid array bounds
+
+### Performance Optimization
+
+- Uses `useCallback` to memoize event handlers, preventing unnecessary re-renders
+- Dependencies are properly declared for `dataPoints` and `formatValue`
+- Efficient calculation with minimal DOM queries
+
+### Coordinate System
+
+- `x`: Horizontal position in pixels from the left edge of the SVG
+- `y`: Fixed at half the SVG height (vertical center)
+- `index`: Integer index into the `dataPoints` array
+
+## Common Use Cases
+
+1. **Price Charts**: Display formatted cryptocurrency prices on hover
+2. **Performance Charts**: Show portfolio value at specific time points
+3. **Trend Analysis**: Examine precise values in sparkline charts
+4. **Comparison Charts**: Compare values across multiple data series
+
+## Related Hooks
+
+- [useDashboardData](/api/hooks/use-dashboard-data) - Provides chart data for the main performance chart
+- [useTranslations](/api/hooks/use-translations) - Used in chart components for labels
+
+## Source Location
+
+`/workspace/source/src/hooks/useChartTooltip.js:9`

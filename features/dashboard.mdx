@@ -1,0 +1,199 @@
+---
+title: Dashboard
+description: Real-time overview of your cryptocurrency portfolio with summary cards, performance charts, and market data
+---
+
+## Overview
+
+The Dashboard is the central hub of CryptoDash, providing a comprehensive real-time view of your cryptocurrency portfolio, market trends, and key performance metrics. It combines summary statistics, interactive charts, and live market data in a responsive, easy-to-read layout.
+
+## Key Components
+
+The Dashboard consists of three main sections:
+
+<CardGroup cols={3}>
+  <Card title="Summary Cards" icon="grid-2">
+    Four KPI cards showing total balance, 24h change, profit/loss, and total assets
+  </Card>
+  <Card title="Performance Chart" icon="chart-line">
+    Interactive Bitcoin price chart with hover tooltips showing historical trends
+  </Card>
+  <Card title="Market Table" icon="table">
+    Live data for top cryptocurrencies with sparklines and real-time prices
+  </Card>
+</CardGroup>
+
+## Summary Cards
+
+Four essential metrics displayed at the top of the dashboard:
+
+### Total Balance
+Aggregated USD value of all assets in your portfolio, calculated from CoinGecko market prices.
+
+### 24h Change
+Percentage and dollar change in your total portfolio value over the last 24 hours.
+
+### Profit/Loss
+Net gains or losses since initial investment, color-coded green for gains and red for losses.
+
+### Total Assets
+Number of different cryptocurrencies currently held in your portfolio.
+
+<Info>
+All summary cards feature **animated count-up values** using the `CountUpValue` component for smooth number transitions.
+</Info>
+
+## Performance Chart
+
+An interactive line chart displaying Bitcoin's price history over the selected time period.
+
+### Features
+
+- **Interactive Tooltips**: Hover over the chart to see exact price and timestamp
+- **SVG Path Rendering**: Smooth line chart generated from historical price data
+- **Responsive Design**: Adapts to mobile, tablet, and desktop screen sizes
+- **Performance Metrics**: Shows current price, 24h change, and trend direction
+
+### Implementation
+
+The chart uses the `MainPerformanceChart` component:
+
+```jsx MainPerformanceChart.jsx
+<MainPerformanceChart
+  chartPath={mainPerformancePath}
+  chartData={mainPerformanceSeries}
+  priceLabel={mainPerformancePriceLabel}
+  changeLabel={mainPerformanceChangeLabel}
+  positive={mainPerformancePositive}
+/>
+```
+
+Data is fetched from the `useDashboardData` hook, which calls the CoinGecko API to retrieve Bitcoin's historical prices:
+
+```javascript
+const {
+  mainPerformancePath,        // SVG path string for chart line
+  mainPerformanceSeries,      // Array of price values
+  mainPerformancePriceLabel,  // Current price formatted as currency
+  mainPerformanceChangeLabel, // 24h change as signed percentage
+  mainPerformancePositive,    // Boolean: true if change is positive
+} = useOutletContext()
+```
+
+<Tip>
+The chart automatically adjusts its Y-axis scale based on the min/max prices in the dataset for optimal visualization.
+</Tip>
+
+## Market Table
+
+Displays the top cryptocurrencies by market cap with live prices, changes, and 7-day trend sparklines.
+
+### Columns
+
+| Column | Description |
+|--------|-------------|
+| **Rank** | Market cap rank (1-based) |
+| **Asset** | Coin name and symbol with icon |
+| **Price** | Current price in USD |
+| **24h %** | 24-hour price change percentage |
+| **Market Cap** | Total market capitalization |
+| **Volume** | 24-hour trading volume |
+| **Last 7 Days** | Sparkline chart showing 7-day price trend |
+
+### Sparklines
+
+Each row includes a mini sparkline chart showing the 7-day price trend:
+
+```javascript dashboardCharts.js
+const sparklinePath = getTrendPath(coin.sparkline_in_7d?.price ?? [])
+```
+
+Sparklines are color-coded:
+- **Green** (#2bee79): Positive 7-day change
+- **Red** (#ff4d4d): Negative 7-day change
+
+## Data Source
+
+All dashboard data comes from the **CoinGecko API** via the `useDashboardData` hook:
+
+```javascript DashboardPage.jsx
+const {
+  loading,
+  error,
+  summaryCards,          // Array of 4 summary card objects
+  marketRows,            // Array of top crypto market data
+  mainPerformancePath,   // Chart path for Bitcoin
+  mainPerformanceSeries, // Price series for Bitcoin
+} = useOutletContext()
+```
+
+<Note>
+The dashboard automatically refreshes data every 60 seconds to ensure you're seeing the latest market information.
+</Note>
+
+## Loading States
+
+While fetching data, the dashboard displays skeleton loaders:
+
+- **Card Skeletons**: Animated placeholder cards
+- **Chart Skeleton**: Placeholder for the performance chart
+- **Table Skeletons**: 8 placeholder rows with animated shimmer effect
+
+```jsx DashboardPage.jsx:25-36
+if (loading) {
+  return (
+    <div className="custom-scrollbar flex-1 overflow-y-auto bg-slate-50 p-4">
+      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <DashboardCardSkeleton key={i} />
+        ))}
+      </div>
+      <PerformanceChartSkeleton />
+      {/* Table skeleton... */}
+    </div>
+  )
+}
+```
+
+## Responsive Design
+
+The dashboard layout adapts to different screen sizes:
+
+- **Mobile** (< 768px): Single column, stacked cards
+- **Tablet** (768px - 1024px): 2-column grid for summary cards
+- **Desktop** (> 1024px): 4-column grid for summary cards
+
+<Tip>
+The market table scrolls horizontally on mobile devices to preserve all columns without truncating data.
+</Tip>
+
+## Error Handling
+
+If the API request fails, an error message is displayed:
+
+```jsx
+if (error) {
+  return (
+    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-6 py-6">
+      <p className="text-sm font-semibold text-red-400">{error}</p>
+    </div>
+  )
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="puzzle-piece" href="/components/overview">
+    Learn about SummaryCardsGrid, MainPerformanceChart, and MarketTable
+  </Card>
+  <Card title="useDashboardData Hook" icon="code" href="/api/hooks/use-dashboard-data">
+    API reference for the main dashboard data hook
+  </Card>
+  <Card title="API Integration" icon="plug" href="/development/api-integration">
+    How CryptoDash fetches data from CoinGecko
+  </Card>
+  <Card title="Charts" icon="chart-line" href="/components/charts">
+    Interactive chart components and utilities
+  </Card>
+</CardGroup>
